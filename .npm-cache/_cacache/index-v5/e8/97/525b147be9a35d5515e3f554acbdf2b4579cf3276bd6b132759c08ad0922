@@ -1,0 +1,2 @@
+
+e88b863ce490fa5d08d0a246f7c46229d4fc66d1	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/zod","integrity":null,"time":1775365081395,"size":"262","metadata":{"time":1775365081395,"url":"http://registry.npmmirror.com/zod","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/zod"},"options":{"compress":true},"status":301}}

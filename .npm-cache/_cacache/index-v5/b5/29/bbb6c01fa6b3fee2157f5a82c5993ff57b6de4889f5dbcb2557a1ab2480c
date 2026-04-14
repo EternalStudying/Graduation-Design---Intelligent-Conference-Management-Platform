@@ -1,0 +1,2 @@
+
+6f684c510be68b9bf6e7e5d244dcc9cf0d8a9cfc	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/path-scurry","integrity":null,"time":1775365081831,"size":"262","metadata":{"time":1775365081831,"url":"http://registry.npmmirror.com/path-scurry","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/path-scurry"},"options":{"compress":true},"status":301}}

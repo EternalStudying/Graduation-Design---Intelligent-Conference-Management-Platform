@@ -1,0 +1,2 @@
+
+ccad794b9a562546061e09f084859f91cd9ece65	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/ansi-to-html","integrity":null,"time":1775365080846,"size":"262","metadata":{"time":1775365080846,"url":"http://registry.npmmirror.com/ansi-to-html","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:00 GMT","location":"https://registry.npmmirror.com/ansi-to-html"},"options":{"compress":true},"status":301}}

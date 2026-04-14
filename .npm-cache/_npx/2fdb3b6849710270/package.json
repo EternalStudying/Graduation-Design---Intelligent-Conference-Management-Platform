@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "claude-mem": "^11.0.0"
+  },
+  "_npx": {
+    "packages": [
+      "claude-mem"
+    ]
+  }
+}

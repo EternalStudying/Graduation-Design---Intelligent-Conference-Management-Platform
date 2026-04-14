@@ -1,0 +1,2 @@
+
+6a6d42d4b299f7d1a7f2b5b1d4ba0c87c71c4ae8	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/sisteransi","integrity":null,"time":1775365081522,"size":"262","metadata":{"time":1775365081522,"url":"http://registry.npmmirror.com/sisteransi","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/sisteransi"},"options":{"compress":true},"status":301}}

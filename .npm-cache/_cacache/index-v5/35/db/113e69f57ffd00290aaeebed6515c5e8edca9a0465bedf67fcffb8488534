@@ -1,0 +1,2 @@
+
+acd0c6f700ded54183d4972426a8ff0761db81fa	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/body-parser","integrity":null,"time":1775365081635,"size":"262","metadata":{"time":1775365081635,"url":"http://registry.npmmirror.com/body-parser","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/body-parser"},"options":{"compress":true},"status":301}}

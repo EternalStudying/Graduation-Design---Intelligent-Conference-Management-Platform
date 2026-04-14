@@ -1,0 +1,2 @@
+
+1bd026e7eb306f9fe489c3c6eadc80e4f31cc282	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/minimatch","integrity":null,"time":1775365081809,"size":"262","metadata":{"time":1775365081809,"url":"http://registry.npmmirror.com/minimatch","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/minimatch"},"options":{"compress":true},"status":301}}

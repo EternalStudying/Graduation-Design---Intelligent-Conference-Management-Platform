@@ -1,0 +1,2 @@
+
+da3e16b447085013bec3f73e97f8a0d9f58094f7	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/lru-cache","integrity":null,"time":1775365082602,"size":"262","metadata":{"time":1775365082602,"url":"http://registry.npmmirror.com/lru-cache","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/lru-cache"},"options":{"compress":true},"status":301}}

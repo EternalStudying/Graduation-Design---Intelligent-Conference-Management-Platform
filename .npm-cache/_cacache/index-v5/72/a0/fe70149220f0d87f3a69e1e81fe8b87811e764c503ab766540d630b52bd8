@@ -1,0 +1,2 @@
+
+3c4a6f6029c0a3ca4fd518f7452d19ec8058e05d	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/eventsource-parser","integrity":null,"time":1775365081576,"size":"262","metadata":{"time":1775365081576,"url":"http://registry.npmmirror.com/eventsource-parser","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/eventsource-parser"},"options":{"compress":true},"status":301}}

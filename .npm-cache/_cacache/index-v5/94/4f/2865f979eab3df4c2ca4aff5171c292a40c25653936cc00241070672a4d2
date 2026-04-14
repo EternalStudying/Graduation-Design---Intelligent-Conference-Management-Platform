@@ -1,0 +1,2 @@
+
+7fb2a851288c832d9fcc2b87daa815556e8ffcf5	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/cors","integrity":null,"time":1775365081535,"size":"262","metadata":{"time":1775365081535,"url":"http://registry.npmmirror.com/cors","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/cors"},"options":{"compress":true},"status":301}}

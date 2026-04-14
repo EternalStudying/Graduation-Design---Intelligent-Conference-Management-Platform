@@ -1,0 +1,2 @@
+
+170ed8e02476d7502e0a686df98ccc101b1ef2c1	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/mime","integrity":null,"time":1775365082433,"size":"262","metadata":{"time":1775365082433,"url":"http://registry.npmmirror.com/mime","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/mime"},"options":{"compress":true},"status":301}}

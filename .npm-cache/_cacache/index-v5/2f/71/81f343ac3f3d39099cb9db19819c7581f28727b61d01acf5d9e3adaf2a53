@@ -1,0 +1,2 @@
+
+8c4414c4e9c78242db8da0792b37072635f8695f	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/negotiator","integrity":null,"time":1775365082433,"size":"262","metadata":{"time":1775365082433,"url":"http://registry.npmmirror.com/negotiator","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/negotiator"},"options":{"compress":true},"status":301}}

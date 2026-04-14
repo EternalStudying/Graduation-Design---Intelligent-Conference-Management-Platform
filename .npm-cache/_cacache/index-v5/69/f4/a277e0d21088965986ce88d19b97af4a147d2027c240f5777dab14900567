@@ -1,0 +1,2 @@
+
+cd60876eb71ab2f4b531bd9675959f5c1f17cf9e	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/shebang-regex","integrity":null,"time":1775365082380,"size":"262","metadata":{"time":1775365082380,"url":"http://registry.npmmirror.com/shebang-regex","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/shebang-regex"},"options":{"compress":true},"status":301}}

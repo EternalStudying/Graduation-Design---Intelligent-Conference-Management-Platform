@@ -1,0 +1,2 @@
+
+ec5f3bc6f6b50b9e1d976fcf0281a39481da25e3	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/tree-kill","integrity":null,"time":1775365080867,"size":"262","metadata":{"time":1775365080867,"url":"http://registry.npmmirror.com/tree-kill","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:00 GMT","location":"https://registry.npmmirror.com/tree-kill"},"options":{"compress":true},"status":301}}

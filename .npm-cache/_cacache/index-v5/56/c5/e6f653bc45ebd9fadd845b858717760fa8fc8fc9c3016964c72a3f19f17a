@@ -1,0 +1,2 @@
+
+23b96c52131d355f3eae7d5b63b1961030818cde	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/json-schema-typed","integrity":null,"time":1775365081583,"size":"262","metadata":{"time":1775365081583,"url":"http://registry.npmmirror.com/json-schema-typed","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/json-schema-typed"},"options":{"compress":true},"status":301}}

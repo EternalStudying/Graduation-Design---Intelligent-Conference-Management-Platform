@@ -1,0 +1,2 @@
+
+61cab1e9bab1141bd14a8335c5f999af49d9a827	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/@types%2ftrusted-types","integrity":null,"time":1775365081618,"size":"262","metadata":{"time":1775365081618,"url":"http://registry.npmmirror.com/@types%2ftrusted-types","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/@types%2ftrusted-types"},"options":{"compress":true},"status":301}}

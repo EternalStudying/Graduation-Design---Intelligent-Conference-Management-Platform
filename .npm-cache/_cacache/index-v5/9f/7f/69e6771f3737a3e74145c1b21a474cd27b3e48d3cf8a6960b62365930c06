@@ -1,0 +1,2 @@
+
+255713c352a4b483fef5d0340bad5a21dce42b24	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/uglify-js","integrity":null,"time":1775365081883,"size":"262","metadata":{"time":1775365081883,"url":"http://registry.npmmirror.com/uglify-js","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/uglify-js"},"options":{"compress":true},"status":301}}

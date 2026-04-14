@@ -1,0 +1,2 @@
+
+dc117bdb68184804abc6f25c50f1daf939ef1531	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/@img%2fsharp-libvips-linux-x64","integrity":null,"time":1775365082137,"size":"262","metadata":{"time":1775365082137,"url":"http://registry.npmmirror.com/@img%2fsharp-libvips-linux-x64","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/@img%2fsharp-libvips-linux-x64"},"options":{"compress":true},"status":301}}

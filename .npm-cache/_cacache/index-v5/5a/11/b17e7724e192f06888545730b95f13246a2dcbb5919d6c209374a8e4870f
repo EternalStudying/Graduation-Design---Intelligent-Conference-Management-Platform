@@ -1,0 +1,2 @@
+
+3063e5621adac5345cf7db5e0c03c69739f3ac03	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/path-to-regexp","integrity":null,"time":1775365081738,"size":"262","metadata":{"time":1775365081738,"url":"http://registry.npmmirror.com/path-to-regexp","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/path-to-regexp"},"options":{"compress":true},"status":301}}

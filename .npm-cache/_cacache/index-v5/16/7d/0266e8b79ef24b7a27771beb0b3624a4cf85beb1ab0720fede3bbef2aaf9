@@ -1,0 +1,2 @@
+
+6f56a86552a13b523cf3ba2763a13abef2b9a5a2	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/foreground-child","integrity":null,"time":1775365081804,"size":"262","metadata":{"time":1775365081804,"url":"http://registry.npmmirror.com/foreground-child","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/foreground-child"},"options":{"compress":true},"status":301}}

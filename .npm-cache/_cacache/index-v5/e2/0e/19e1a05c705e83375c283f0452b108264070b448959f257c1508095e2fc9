@@ -1,0 +1,2 @@
+
+2b6ef33e4db2a79da7e7b6b428024b8387b2ed67	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/picocolors","integrity":null,"time":1775365080859,"size":"262","metadata":{"time":1775365080859,"url":"http://registry.npmmirror.com/picocolors","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:00 GMT","location":"https://registry.npmmirror.com/picocolors"},"options":{"compress":true},"status":301}}

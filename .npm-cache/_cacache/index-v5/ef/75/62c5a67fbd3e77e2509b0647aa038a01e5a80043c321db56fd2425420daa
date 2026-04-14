@@ -1,0 +1,2 @@
+
+04570486ec0dc9a4bc02862fc8f4ad706eff4015	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/@img%2fsharp-darwin-x64","integrity":null,"time":1775365081521,"size":"262","metadata":{"time":1775365081521,"url":"http://registry.npmmirror.com/@img%2fsharp-darwin-x64","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:01 GMT","location":"https://registry.npmmirror.com/@img%2fsharp-darwin-x64"},"options":{"compress":true},"status":301}}

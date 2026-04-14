@@ -1,0 +1,2 @@
+
+d07f89d1f4cf28206b13c9431da0ee9a11909536	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/mime-db","integrity":null,"time":1775365082505,"size":"262","metadata":{"time":1775365082505,"url":"http://registry.npmmirror.com/mime-db","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/mime-db"},"options":{"compress":true},"status":301}}

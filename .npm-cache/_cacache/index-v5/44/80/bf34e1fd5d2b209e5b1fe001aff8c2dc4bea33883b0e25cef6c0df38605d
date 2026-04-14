@@ -1,0 +1,2 @@
+
+3b991319875a0a76ab21380d079ef98e3e5dcfff	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/wrappy","integrity":null,"time":1775365082957,"size":"262","metadata":{"time":1775365082957,"url":"http://registry.npmmirror.com/wrappy","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sun, 05 Apr 2026 04:58:02 GMT","location":"https://registry.npmmirror.com/wrappy"},"options":{"compress":true},"status":301}}

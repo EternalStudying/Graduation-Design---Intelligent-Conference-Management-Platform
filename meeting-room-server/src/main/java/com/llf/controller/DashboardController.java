@@ -2,9 +2,8 @@ package com.llf.controller;
 
 import com.llf.result.R;
 import com.llf.service.DashboardService;
-import com.llf.vo.DashboardOverviewVO;
-import com.llf.vo.DashboardQuoteVO;
-import com.llf.vo.DashboardSummaryVO;
+import com.llf.vo.dashboard.DashboardOverviewVO;
+import com.llf.vo.dashboard.DashboardQuoteVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,11 +15,6 @@ public class DashboardController {
 
     @Resource
     private DashboardService dashboardService;
-
-    @GetMapping("/summary")
-    public R<DashboardSummaryVO> summary() {
-        return R.ok(dashboardService.getSummary());
-    }
 
     @GetMapping("/overview")
     public R<DashboardOverviewVO> overview() {

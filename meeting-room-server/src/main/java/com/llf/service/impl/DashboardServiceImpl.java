@@ -8,14 +8,13 @@ import com.llf.mapper.RoomMapper;
 import com.llf.mapper.ReservationMapper;
 import com.llf.result.BizException;
 import com.llf.service.DashboardService;
-import com.llf.vo.DashboardOverviewSummaryVO;
-import com.llf.vo.DashboardOverviewVO;
-import com.llf.vo.DashboardQuoteVO;
-import com.llf.vo.DashboardReservationSlotVO;
-import com.llf.vo.DashboardRoomStatusVO;
-import com.llf.vo.DashboardSummaryVO;
-import com.llf.vo.DashboardTodayScheduleVO;
-import com.llf.vo.RoomListItemVO;
+import com.llf.vo.dashboard.DashboardOverviewSummaryVO;
+import com.llf.vo.dashboard.DashboardOverviewVO;
+import com.llf.vo.dashboard.DashboardQuoteVO;
+import com.llf.vo.dashboard.DashboardReservationSlotVO;
+import com.llf.vo.dashboard.DashboardRoomStatusVO;
+import com.llf.vo.dashboard.DashboardTodayScheduleVO;
+import com.llf.vo.room.RoomListItemVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -51,15 +50,6 @@ public class DashboardServiceImpl implements DashboardService {
     private RoomMapper roomMapper;
     @Resource
     private ReservationMapper reservationMapper;
-
-    @Override
-    public DashboardSummaryVO getSummary() {
-        DashboardSummaryVO vo = new DashboardSummaryVO();
-        vo.setRoomTotal(roomMapper.countAll());
-        vo.setAvailableRoomCount(roomMapper.countAvailable());
-        vo.setActiveReservationCount(reservationMapper.countActive());
-        return vo;
-    }
 
     @Override
     public DashboardOverviewVO getOverview() {

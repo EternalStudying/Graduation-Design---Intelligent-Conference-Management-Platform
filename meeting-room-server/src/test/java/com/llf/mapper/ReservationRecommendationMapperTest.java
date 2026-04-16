@@ -1,6 +1,6 @@
 package com.llf.mapper;
 
-import com.llf.vo.MyReservationVO;
+import com.llf.vo.reservation.MyReservationVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;

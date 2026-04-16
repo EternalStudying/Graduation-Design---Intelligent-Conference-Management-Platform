@@ -1,27 +1,27 @@
 package com.llf.service.impl;
 
-import com.llf.dto.MyReservationCancelDTO;
-import com.llf.dto.MyReservationReviewDTO;
-import com.llf.dto.MyReservationUpdateDTO;
-import com.llf.dto.ReservationCreateDTO;
-import com.llf.dto.ReservationDeviceRequirementDTO;
-import com.llf.dto.ReservationRecommendationDTO;
+import com.llf.dto.reservation.MyReservationCancelDTO;
+import com.llf.dto.reservation.MyReservationReviewDTO;
+import com.llf.dto.reservation.MyReservationUpdateDTO;
+import com.llf.dto.reservation.ReservationCreateDTO;
+import com.llf.dto.reservation.ReservationDeviceRequirementDTO;
+import com.llf.dto.reservation.ReservationRecommendationDTO;
 import com.llf.mapper.ReservationMapper;
 import com.llf.mapper.RoomMapper;
 import com.llf.result.BizException;
 import com.llf.service.NotificationService;
 import com.llf.service.ReservationService;
 import com.llf.util.DateTimeUtils;
-import com.llf.vo.CalendarEventVO;
-import com.llf.vo.MyReservationReviewResultVO;
-import com.llf.vo.MyReservationVO;
-import com.llf.vo.NotificationTodoTargetVO;
-import com.llf.vo.PageResultVO;
-import com.llf.vo.ReservationReviewVO;
-import com.llf.vo.ReservationCreateVO;
-import com.llf.vo.ReservationRecommendationItemVO;
-import com.llf.vo.ReservationRecommendationVO;
-import com.llf.vo.RoomOptionVO;
+import com.llf.vo.reservation.CalendarEventVO;
+import com.llf.vo.reservation.MyReservationReviewResultVO;
+import com.llf.vo.reservation.MyReservationVO;
+import com.llf.vo.notification.NotificationTodoTargetVO;
+import com.llf.vo.common.PageResultVO;
+import com.llf.vo.reservation.ReservationReviewVO;
+import com.llf.vo.reservation.ReservationCreateVO;
+import com.llf.vo.reservation.ReservationRecommendationItemVO;
+import com.llf.vo.reservation.ReservationRecommendationVO;
+import com.llf.vo.room.RoomOptionVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -204,11 +204,6 @@ public class ReservationServiceImpl implements ReservationService {
         ReservationRecommendationVO result = new ReservationRecommendationVO();
         result.setRecommendations(items);
         return result;
-    }
-
-    @Override
-    public void cancel(Long id) {
-        reservationMapper.cancel(id);
     }
 
     @Override

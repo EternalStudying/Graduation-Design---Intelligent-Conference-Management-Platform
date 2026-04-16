@@ -3,13 +3,13 @@ package com.llf.service.impl;
 import com.llf.auth.AuthContext;
 import com.llf.auth.AuthUser;
 import com.llf.auth.TokenStore;
-import com.llf.dto.LoginDTO;
+import com.llf.dto.auth.LoginDTO;
 import com.llf.mapper.SysUserMapper;
 import com.llf.result.BizException;
 import com.llf.service.AuthService;
 import com.llf.service.CaptchaService;
-import com.llf.vo.LoginVO;
-import com.llf.vo.UserInfoVO;
+import com.llf.vo.auth.LoginVO;
+import com.llf.vo.auth.UserInfoVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -66,10 +66,6 @@ public class AuthServiceImpl implements AuthService {
         vo.setUsername(u.getUsername());
         vo.setRoles(List.of(normalizeRole(u.getRole())));
         return vo;
-    }
-
-    @Override
-    public void logout() {
     }
 
     private String normalizeRole(String role) {

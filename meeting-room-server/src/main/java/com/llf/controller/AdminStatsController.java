@@ -2,7 +2,7 @@ package com.llf.controller;
 
 import com.llf.result.R;
 import com.llf.service.AnalyticsService;
-import com.llf.vo.analytics.AdminStatsVO;
+import com.llf.vo.admin.stats.AdminStatsVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

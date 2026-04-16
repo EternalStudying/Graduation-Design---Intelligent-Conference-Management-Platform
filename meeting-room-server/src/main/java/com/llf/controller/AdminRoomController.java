@@ -1,12 +1,12 @@
 package com.llf.controller;
 
-import com.llf.dto.AdminRoomDevicesDTO;
-import com.llf.dto.AdminRoomStatusDTO;
-import com.llf.dto.RoomUpsertDTO;
+import com.llf.dto.admin.room.AdminRoomDevicesDTO;
+import com.llf.dto.admin.room.AdminRoomStatusDTO;
+import com.llf.dto.admin.room.RoomUpsertDTO;
 import com.llf.result.R;
 import com.llf.service.RoomService;
-import com.llf.vo.RoomPageDataVO;
-import com.llf.vo.RoomPageItemVO;
+import com.llf.vo.room.RoomPageDataVO;
+import com.llf.vo.room.RoomPageItemVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

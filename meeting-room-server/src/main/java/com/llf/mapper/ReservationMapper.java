@@ -1,10 +1,10 @@
 package com.llf.mapper;
 
-import com.llf.vo.CalendarEventVO;
-import com.llf.vo.DashboardReservationSlotVO;
-import com.llf.vo.DashboardTodayScheduleVO;
-import com.llf.vo.MyReservationVO;
-import com.llf.vo.ReservationCreateVO;
+import com.llf.vo.reservation.CalendarEventVO;
+import com.llf.vo.dashboard.DashboardReservationSlotVO;
+import com.llf.vo.dashboard.DashboardTodayScheduleVO;
+import com.llf.vo.reservation.MyReservationVO;
+import com.llf.vo.reservation.ReservationCreateVO;
 import lombok.Data;
 import org.apache.ibatis.annotations.*;
 
@@ -13,19 +13,6 @@ import java.util.List;
 
 @Mapper
 public interface ReservationMapper {
-
-    @Select("SELECT COUNT(*) FROM reservation WHERE status = 'ACTIVE'")
-    Integer countActive();
-
-    @Select("""
-            SELECT COUNT(*)
-            FROM reservation
-            WHERE status <> 'CANCELLED'
-              AND start_time < #{end}
-              AND end_time > #{start}
-            """)
-    Integer countTodayMeetings(@Param("start") Timestamp start,
-                               @Param("end") Timestamp end);
 
     @Select("""
             SELECT COUNT(*)
@@ -219,14 +206,6 @@ public interface ReservationMapper {
     // ✅ 拿到刚插入的自增 id（MySQL）
     @Select("SELECT LAST_INSERT_ID()")
     Long lastInsertId();
-
-    @Update("""
-              UPDATE reservation
-              SET status='CANCELLED',
-                  cancel_reason = IFNULL(cancel_reason, '用户取消')
-              WHERE id=#{id}
-            """)
-    int cancel(@Param("id") Long id);
 
     @Select("""
             SELECT COUNT(1)
@@ -451,53 +430,6 @@ public interface ReservationMapper {
                                                         @Param("scope") String scope,
                                                         @Param("limit") int limit,
                                                         @Param("offset") int offset);
-
-    @Select("""
-            <script>
-                SELECT COUNT(1)
-                FROM reservation r
-                WHERE 1 = 1
-                  <if test="start != null">
-                    AND r.start_time &gt;= #{start}
-                  </if>
-                  <if test="end != null">
-                    AND r.start_time &lt; #{end}
-                  </if>
-                  <if test="status != null and status != ''">
-                    AND r.status = #{status}
-                  </if>
-                  <choose>
-                    <when test="scope == 'organizer'">
-                      AND r.organizer_id = #{currentUserId}
-                    </when>
-                    <when test="scope == 'participant'">
-                      AND r.organizer_id &lt;&gt; #{currentUserId}
-                      AND EXISTS (
-                        SELECT 1
-                        FROM reservation_participant rp
-                        WHERE rp.reservation_id = r.id
-                          AND rp.user_id = #{currentUserId}
-                      )
-                    </when>
-                    <otherwise>
-                      AND (
-                        r.organizer_id = #{currentUserId}
-                        OR EXISTS (
-                          SELECT 1
-                          FROM reservation_participant rp
-                          WHERE rp.reservation_id = r.id
-                            AND rp.user_id = #{currentUserId}
-                        )
-                      )
-                    </otherwise>
-                  </choose>
-            </script>
-            """)
-    long countMyReservations(@Param("currentUserId") Long currentUserId,
-                             @Param("start") Timestamp start,
-                             @Param("end") Timestamp end,
-                             @Param("scope") String scope,
-                             @Param("status") String status);
 
     @Select("""
             <script>

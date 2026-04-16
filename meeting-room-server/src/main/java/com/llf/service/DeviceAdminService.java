@@ -1,16 +1,10 @@
 package com.llf.service;
 
-import com.llf.dto.AdminDeviceStatusDTO;
-import com.llf.dto.AdminDeviceUpsertDTO;
-import com.llf.dto.DeviceUpsertDTO;
-import com.llf.vo.AdminDevicePageVO;
-import com.llf.vo.AdminDeviceVO;
-import com.llf.vo.DeviceAdminVO;
-import com.llf.vo.DeviceBindingStatsVO;
-import com.llf.vo.DeviceConcurrencyDetailVO;
-import com.llf.vo.DeviceConcurrencyVO;
-
-import java.util.List;
+import com.llf.dto.admin.device.AdminDeviceStatusDTO;
+import com.llf.dto.admin.device.AdminDeviceUpsertDTO;
+import com.llf.vo.admin.device.AdminDevicePageVO;
+import com.llf.vo.admin.device.AdminDeviceVO;
+import com.llf.vo.admin.device.DeviceBindingStatsVO;
 
 public interface DeviceAdminService {
     AdminDevicePageVO adminPage(Integer currentPage, Integer size, String keyword, String status);
@@ -26,16 +20,4 @@ public interface DeviceAdminService {
     void adminDelete(Long id);
 
     DeviceBindingStatsVO deviceBindingStats();
-
-    List<DeviceAdminVO> list(String keyword, String status);
-
-    void create(DeviceUpsertDTO dto);
-
-    void update(String code, DeviceUpsertDTO dto);
-
-    Integer delete(String code, boolean force);
-
-    List<DeviceConcurrencyVO> deviceConcurrencyStat();
-
-    DeviceConcurrencyDetailVO deviceConcurrencyDetail(String deviceCode);
 }

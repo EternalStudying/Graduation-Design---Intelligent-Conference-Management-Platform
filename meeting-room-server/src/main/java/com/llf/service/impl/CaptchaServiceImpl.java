@@ -4,7 +4,7 @@ import com.llf.auth.CaptchaStore;
 import com.llf.result.BizException;
 import com.llf.result.ErrorCode;
 import com.llf.service.CaptchaService;
-import com.llf.vo.CaptchaVO;
+import com.llf.vo.auth.CaptchaVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

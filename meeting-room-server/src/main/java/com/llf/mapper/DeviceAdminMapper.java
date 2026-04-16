@@ -1,12 +1,9 @@
 package com.llf.mapper;
 
-import com.llf.vo.AdminDeviceVO;
-import com.llf.vo.DeviceAdminVO;
-import com.llf.vo.ReservationBriefVO;
+import com.llf.vo.admin.device.AdminDeviceVO;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface DeviceAdminMapper {
@@ -183,9 +180,6 @@ public interface DeviceAdminMapper {
     @Select("SELECT COUNT(1) FROM device WHERE device_code = #{deviceCode} AND id <> #{id}")
     int countByDeviceCodeExcludeId(@Param("id") Long id, @Param("deviceCode") String deviceCode);
 
-    @Select("SELECT id FROM device WHERE device_code = #{code} LIMIT 1")
-    Long selectIdByCode(@Param("code") String code);
-
     @Select("SELECT COUNT(1) FROM room_device WHERE device_id = #{deviceId}")
     int countRoomBindings(@Param("deviceId") Long deviceId);
 
@@ -218,144 +212,6 @@ public interface DeviceAdminMapper {
 
     @Delete("DELETE FROM device WHERE id = #{id}")
     int deleteById(@Param("id") Long id);
-
-    @Select("""
-            <script>
-            SELECT
-              d.device_code AS code,
-              d.name,
-              d.total,
-              d.status,
-              d.description,
-              (
-                SELECT COUNT(1)
-                FROM room_device rd
-                WHERE rd.device_id = d.id
-              ) AS usedCount
-            FROM device d
-            WHERE 1=1
-              <if test="keyword != null and keyword != ''">
-                AND (
-                  LOWER(d.device_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                  OR LOWER(d.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                )
-              </if>
-              <if test="status != null and status != ''">
-                AND d.status = #{status}
-              </if>
-            ORDER BY d.device_code
-            </script>
-            """)
-    List<DeviceAdminVO> selectAdminList(@Param("keyword") String keyword,
-                                        @Param("status") String status);
-
-    @Select("SELECT COUNT(1) FROM device WHERE device_code = #{code}")
-    int existsByCode(@Param("code") String code);
-
-    @Select("SELECT COUNT(1) FROM device WHERE name = #{name}")
-    int existsByName(@Param("name") String name);
-
-    @Select("""
-            SELECT COUNT(1)
-            FROM device
-            WHERE name = #{name}
-              AND device_code <> #{code}
-            """)
-    int existsByNameExcludeCode(@Param("name") String name, @Param("code") String code);
-
-    @Insert("""
-            INSERT INTO device(device_code, name, total, status, description, created_at)
-            VALUES(#{code}, #{name}, #{total}, #{status}, #{description}, NOW())
-            """)
-    int insert(@Param("code") String code,
-               @Param("name") String name,
-               @Param("total") Integer total,
-               @Param("status") String status,
-               @Param("description") String description);
-
-    @Update("""
-            UPDATE device
-            SET name=#{name},
-                total=#{total},
-                status=#{status},
-                description=#{description}
-            WHERE device_code=#{code}
-            """)
-    int updateByCode(@Param("code") String code,
-                     @Param("name") String name,
-                     @Param("total") Integer total,
-                     @Param("status") String status,
-                     @Param("description") String description);
-
-    @Delete("DELETE FROM room_device WHERE device_id = #{deviceId}")
-    int deleteRoomBindings(@Param("deviceId") Long deviceId);
-
-    @Delete("DELETE FROM device WHERE device_code = #{code}")
-    int deleteByCode(@Param("code") String code);
-
-    @Select("""
-            SELECT
-              d.id,
-              d.device_code,
-              d.name,
-              d.status,
-              d.total
-            FROM device d
-            WHERE d.status = 'ENABLED'
-            ORDER BY d.device_code
-            """)
-    List<Map<String, Object>> selectAllEnabledDevices();
-
-    @Select("""
-            SELECT r.start_time, r.end_time, rd.quantity
-            FROM reservation r
-            JOIN reservation_device rd ON rd.reservation_id = r.id
-            WHERE r.status = 'active'
-              AND rd.device_id = #{deviceId}
-            """)
-    List<Map<String, Object>> selectActiveTimeRangesByDeviceId(@Param("deviceId") Long deviceId);
-
-    @Select("""
-            SELECT id, device_code, name, total, status
-            FROM device
-            WHERE device_code = #{code}
-            LIMIT 1
-            """)
-    Map<String, Object> selectDeviceByCode(@Param("code") String code);
-
-    @Select("SELECT COUNT(1) FROM meeting_room")
-    int countRooms();
-
-    @Select("""
-            SELECT COUNT(1)
-            FROM room_device rd
-            WHERE rd.device_id = #{deviceId}
-            """)
-    int countRoomsBoundToDevice(@Param("deviceId") Long deviceId);
-
-    @Select("""
-            SELECT r.start_time, r.end_time, rd.quantity
-            FROM reservation r
-            JOIN reservation_device rd ON rd.reservation_id = r.id
-            JOIN device d ON d.id = rd.device_id
-            WHERE r.status = 'active'
-              AND d.device_code = #{deviceCode}
-            """)
-    List<Map<String, Object>> selectActiveTimeRangesByDeviceCode(@Param("deviceCode") String deviceCode);
-
-    @Select("""
-            SELECT r.id, r.title, mr.room_code AS roomId,
-                   r.start_time AS start,
-                   r.end_time AS end
-            FROM reservation r
-            join meeting_room mr on r.room_id = mr.id
-            JOIN reservation_device rd ON rd.reservation_id = r.id
-            JOIN device d ON d.id = rd.device_id
-            WHERE r.status = 'active'
-              AND d.device_code = #{deviceCode}
-            ORDER BY r.start_time DESC
-            """)
-    List<ReservationBriefVO> selectActiveReservationBriefsByDeviceCode(@Param("deviceCode") String deviceCode);
 
     class AdminDeviceCreateRow {
         public Long id;

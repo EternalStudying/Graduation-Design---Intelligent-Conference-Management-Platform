@@ -1,21 +1,20 @@
 package com.llf.controller;
 
 import com.llf.auth.AuthContext;
-import com.llf.dto.MyReservationCancelDTO;
-import com.llf.dto.MyReservationReviewDTO;
-import com.llf.dto.MyReservationUpdateDTO;
-import com.llf.dto.ReservationCreateDTO;
-import com.llf.dto.ReservationRecommendationDTO;
-import com.llf.mapper.ReservationMapper;
+import com.llf.dto.reservation.MyReservationCancelDTO;
+import com.llf.dto.reservation.MyReservationReviewDTO;
+import com.llf.dto.reservation.MyReservationUpdateDTO;
+import com.llf.dto.reservation.ReservationCreateDTO;
+import com.llf.dto.reservation.ReservationRecommendationDTO;
 import com.llf.result.R;
 import com.llf.service.ReservationService;
-import com.llf.vo.CalendarEventVO;
-import com.llf.vo.MyReservationReviewResultVO;
-import com.llf.vo.MyReservationVO;
-import com.llf.vo.PageResultVO;
-import com.llf.vo.ReservationCreateVO;
-import com.llf.vo.ReservationRecommendationVO;
-import com.llf.vo.RoomOptionVO;
+import com.llf.vo.reservation.CalendarEventVO;
+import com.llf.vo.reservation.MyReservationReviewResultVO;
+import com.llf.vo.reservation.MyReservationVO;
+import com.llf.vo.common.PageResultVO;
+import com.llf.vo.reservation.ReservationCreateVO;
+import com.llf.vo.reservation.ReservationRecommendationVO;
+import com.llf.vo.room.RoomOptionVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -31,8 +30,6 @@ public class ReservationController {
 
     @Resource
     private ReservationService reservationService;
-    @Resource
-    private ReservationMapper reservationMapper;
 
     @GetMapping("/calendar")
     public R<List<CalendarEventVO>> calendar(@RequestParam @NotBlank(message = "startDate must not be blank") String startDate,
@@ -53,20 +50,12 @@ public class ReservationController {
         return R.ok(reservationService.recommend(dto));
     }
 
-    @PostMapping("/{id}/cancel")
-    public R<String> cancel(@PathVariable Long id) {
-        reservationService.cancel(id);
-        return R.ok("ok");
-    }
-
     @GetMapping("/my")
     public R<List<MyReservationVO>> my(@RequestParam @NotBlank(message = "startDate must not be blank") String startDate,
                                        @RequestParam @NotBlank(message = "endDate must not be blank") String endDate,
                                        @RequestParam @NotBlank(message = "scope must not be blank") String scope,
                                        @RequestParam(required = false) String status,
-                                       @RequestParam(required = false, defaultValue = "false") boolean futureOnly,
-                                       @RequestParam(required = false) Integer pageNum,
-                                       @RequestParam(required = false) Integer pageSize) {
+                                       @RequestParam(required = false, defaultValue = "false") boolean futureOnly) {
         Long currentUserId = AuthContext.get().getId();
         return R.ok(reservationService.myReservations(currentUserId, startDate, endDate, scope, status, futureOnly));
     }
@@ -103,10 +92,5 @@ public class ReservationController {
                                                               @Valid @RequestBody MyReservationReviewDTO dto) {
         Long currentUserId = AuthContext.get().getId();
         return R.ok(reservationService.submitMyReservationReview(id, currentUserId, dto));
-    }
-
-    @GetMapping("/active-count")
-    public R<Integer> activeCount() {
-        return R.ok(reservationMapper.countActive());
     }
 }

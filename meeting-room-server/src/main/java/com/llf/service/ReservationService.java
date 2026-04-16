@@ -1,17 +1,17 @@
 package com.llf.service;
 
-import com.llf.dto.MyReservationCancelDTO;
-import com.llf.dto.MyReservationReviewDTO;
-import com.llf.dto.MyReservationUpdateDTO;
-import com.llf.dto.ReservationCreateDTO;
-import com.llf.dto.ReservationRecommendationDTO;
-import com.llf.vo.CalendarEventVO;
-import com.llf.vo.MyReservationReviewResultVO;
-import com.llf.vo.MyReservationVO;
-import com.llf.vo.PageResultVO;
-import com.llf.vo.ReservationCreateVO;
-import com.llf.vo.ReservationRecommendationVO;
-import com.llf.vo.RoomOptionVO;
+import com.llf.dto.reservation.MyReservationCancelDTO;
+import com.llf.dto.reservation.MyReservationReviewDTO;
+import com.llf.dto.reservation.MyReservationUpdateDTO;
+import com.llf.dto.reservation.ReservationCreateDTO;
+import com.llf.dto.reservation.ReservationRecommendationDTO;
+import com.llf.vo.reservation.CalendarEventVO;
+import com.llf.vo.reservation.MyReservationReviewResultVO;
+import com.llf.vo.reservation.MyReservationVO;
+import com.llf.vo.common.PageResultVO;
+import com.llf.vo.reservation.ReservationCreateVO;
+import com.llf.vo.reservation.ReservationRecommendationVO;
+import com.llf.vo.room.RoomOptionVO;
 
 import java.util.List;
 
@@ -21,8 +21,6 @@ public interface ReservationService {
     ReservationCreateVO create(ReservationCreateDTO dto, Long organizerId);
 
     ReservationRecommendationVO recommend(ReservationRecommendationDTO dto);
-
-    void cancel(Long id);
 
     List<MyReservationVO> myReservations(Long currentUserId, String startDate, String endDate, String scope, String status, boolean futureOnly);
 

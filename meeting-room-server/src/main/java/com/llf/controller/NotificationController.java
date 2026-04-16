@@ -1,14 +1,14 @@
 package com.llf.controller;
 
 import com.llf.auth.AuthContext;
-import com.llf.dto.NotificationReadAllDTO;
+import com.llf.dto.notification.NotificationReadAllDTO;
 import com.llf.result.R;
 import com.llf.service.NotificationService;
-import com.llf.vo.NotificationItemVO;
-import com.llf.vo.NotificationReadAllResultVO;
-import com.llf.vo.NotificationReadResultVO;
-import com.llf.vo.NotificationSummaryVO;
-import com.llf.vo.PageResultVO;
+import com.llf.vo.notification.NotificationItemVO;
+import com.llf.vo.notification.NotificationReadAllResultVO;
+import com.llf.vo.notification.NotificationReadResultVO;
+import com.llf.vo.notification.NotificationSummaryVO;
+import com.llf.vo.common.PageResultVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;

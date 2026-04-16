@@ -1,20 +1,14 @@
 package com.llf.service.impl;
 
-import com.llf.dto.AdminDeviceStatusDTO;
-import com.llf.dto.AdminDeviceUpsertDTO;
-import com.llf.dto.DeviceUpsertDTO;
+import com.llf.dto.admin.device.AdminDeviceStatusDTO;
+import com.llf.dto.admin.device.AdminDeviceUpsertDTO;
 import com.llf.mapper.DeviceAdminMapper;
 import com.llf.result.BizException;
 import com.llf.service.DeviceAdminService;
-import com.llf.util.DateTimeUtils;
-import com.llf.vo.AdminDevicePageVO;
-import com.llf.vo.AdminDeviceStatsVO;
-import com.llf.vo.AdminDeviceVO;
-import com.llf.vo.DeviceAdminVO;
-import com.llf.vo.DeviceBindingStatsVO;
-import com.llf.vo.DeviceConcurrencyDetailVO;
-import com.llf.vo.DeviceConcurrencyVO;
-import com.llf.vo.ReservationBriefVO;
+import com.llf.vo.admin.device.AdminDevicePageVO;
+import com.llf.vo.admin.device.AdminDeviceStatsVO;
+import com.llf.vo.admin.device.AdminDeviceVO;
+import com.llf.vo.admin.device.DeviceBindingStatsVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -177,151 +171,6 @@ public class DeviceAdminServiceImpl implements DeviceAdminService {
         return stats;
     }
 
-    @Override
-    public List<DeviceAdminVO> list(String keyword, String status) {
-        return deviceAdminMapper.selectAdminList(keyword, status);
-    }
-
-    @Override
-    @Transactional
-    public void create(DeviceUpsertDTO dto) {
-        String code = safe(dto.getCode());
-        String name = safe(dto.getName());
-
-        if (code.isEmpty()) throw new RuntimeException("device code must not be blank");
-        if (name.isEmpty()) throw new RuntimeException("device name must not be blank");
-        if (deviceAdminMapper.existsByCode(code) > 0) throw new RuntimeException("device code already exists");
-
-        int total = dto.getTotal() == null ? 0 : dto.getTotal();
-        if (total < 0) throw new RuntimeException("total must be greater than or equal to 0");
-
-        String status = safe(dto.getStatus());
-        if (status.isEmpty()) status = "ENABLED";
-        if (!DEVICE_STATUS.contains(status)) {
-            throw new RuntimeException("status must be one of ENABLED, DISABLED");
-        }
-
-        deviceAdminMapper.insert(code, name, total, status, dto.getDescription());
-    }
-
-    @Override
-    @Transactional
-    public void update(String codePath, DeviceUpsertDTO dto) {
-        String code = safe(codePath);
-        if (code.isEmpty()) throw new RuntimeException("device code must not be blank");
-
-        Long deviceId = deviceAdminMapper.selectIdByCode(code);
-        if (deviceId == null) throw new RuntimeException("device not found");
-
-        String name = safe(dto.getName());
-        if (name.isEmpty()) throw new RuntimeException("device name must not be blank");
-
-        int total = dto.getTotal() == null ? 0 : dto.getTotal();
-        if (total < 0) throw new RuntimeException("total must be greater than or equal to 0");
-
-        String status = safe(dto.getStatus());
-        if (status.isEmpty()) status = "ENABLED";
-        if (!DEVICE_STATUS.contains(status)) {
-            throw new RuntimeException("status must be one of ENABLED, DISABLED");
-        }
-
-        deviceAdminMapper.updateByCode(code, name, total, status, dto.getDescription());
-    }
-
-    @Override
-    @Transactional
-    public Integer delete(String codePath, boolean force) {
-        String code = safe(codePath);
-        if (code.isEmpty()) throw new RuntimeException("device code must not be blank");
-
-        Long deviceId = deviceAdminMapper.selectIdByCode(code);
-        if (deviceId == null) return 0;
-
-        int used = deviceAdminMapper.countRoomBindings(deviceId);
-        if (used > 0) {
-            throw new RuntimeException("device is still bound to rooms");
-        }
-
-        deviceAdminMapper.deleteByCode(code);
-        return 0;
-    }
-
-    @Override
-    public List<DeviceConcurrencyVO> deviceConcurrencyStat() {
-        List<Map<String, Object>> devices = deviceAdminMapper.selectAllEnabledDevices();
-        List<DeviceConcurrencyVO> result = new ArrayList<>();
-
-        int totalRooms = deviceAdminMapper.countRooms();
-        if (totalRooms <= 0) {
-            totalRooms = 1;
-        }
-
-        for (Map<String, Object> d : devices) {
-            Long deviceId = ((Number) d.get("id")).longValue();
-            Integer total = ((Number) d.get("total")).intValue();
-
-            int usedRoomsCount = deviceAdminMapper.countRoomsBoundToDevice(deviceId);
-            int coveragePct = (int) Math.round(usedRoomsCount * 100.0 / totalRooms);
-
-            List<Map<String, Object>> reservations = deviceAdminMapper.selectActiveTimeRangesByDeviceId(deviceId);
-            int maxConcurrent = calculatePeak(reservations);
-            int shortage = Math.max(0, maxConcurrent - total);
-
-            DeviceConcurrencyVO vo = new DeviceConcurrencyVO();
-            vo.setCode((String) d.get("device_code"));
-            vo.setName((String) d.get("name"));
-            vo.setStatus((String) d.get("status"));
-            vo.setTotal(total);
-            vo.setMaxConcurrent(maxConcurrent);
-            vo.setShortage(shortage);
-            vo.setUsedRoomsCount(usedRoomsCount);
-            vo.setCoveragePct(coveragePct);
-            result.add(vo);
-        }
-
-        return result;
-    }
-
-    @Override
-    public DeviceConcurrencyDetailVO deviceConcurrencyDetail(String deviceCode) {
-        Map<String, Object> d = deviceAdminMapper.selectDeviceByCode(deviceCode);
-        if (d == null) {
-            throw new RuntimeException("device not found");
-        }
-
-        Long deviceId = ((Number) d.get("id")).longValue();
-        String code = String.valueOf(d.get("device_code"));
-        String name = String.valueOf(d.get("name"));
-        Integer total = d.get("total") == null ? 0 : ((Number) d.get("total")).intValue();
-        String status = String.valueOf(d.get("status"));
-
-        int totalRooms = deviceAdminMapper.countRooms();
-        if (totalRooms <= 0) {
-            totalRooms = 1;
-        }
-
-        int usedRoomsCount = deviceAdminMapper.countRoomsBoundToDevice(deviceId);
-        int coveragePct = (int) Math.round(usedRoomsCount * 100.0 / totalRooms);
-
-        List<Map<String, Object>> ranges = deviceAdminMapper.selectActiveTimeRangesByDeviceCode(code);
-        int peak = calculatePeak(ranges);
-        int shortage = Math.max(0, peak - total);
-
-        List<ReservationBriefVO> related = deviceAdminMapper.selectActiveReservationBriefsByDeviceCode(code);
-
-        DeviceConcurrencyDetailVO vo = new DeviceConcurrencyDetailVO();
-        vo.setCode(code);
-        vo.setName(name);
-        vo.setStatus(status);
-        vo.setTotal(total);
-        vo.setMaxConcurrent(peak);
-        vo.setShortage(shortage);
-        vo.setUsedRoomsCount(usedRoomsCount);
-        vo.setCoveragePct(coveragePct);
-        vo.setRelatedReservations(related == null ? new ArrayList<>() : related);
-        return vo;
-    }
-
     private void validateAdminUpsert(AdminDeviceUpsertDTO dto, Long id) {
         if (dto == null) {
             throw new BizException(400, "request body must not be null");
@@ -432,48 +281,6 @@ public class DeviceAdminServiceImpl implements DeviceAdminService {
             return null;
         }
         return normalizeStatus(status);
-    }
-
-    private String safe(String s) {
-        return s == null ? "" : s.trim();
-    }
-
-    private int calculatePeak(List<Map<String, Object>> reservations) {
-        List<long[]> events = new ArrayList<>();
-
-        for (Map<String, Object> r : reservations) {
-            long startMs = DateTimeUtils.toEpochMillis(r.get("start_time"));
-            long endMs = DateTimeUtils.toEpochMillis(r.get("end_time"));
-
-            int qty = 1;
-            Object qv = r.get("quantity");
-            if (qv instanceof Number n) {
-                qty = n.intValue();
-            }
-            if (qty <= 0 || startMs <= 0 || endMs <= 0 || endMs <= startMs) {
-                continue;
-            }
-
-            events.add(new long[]{startMs, qty});
-            events.add(new long[]{endMs, -qty});
-        }
-
-        events.sort((a, b) -> {
-            if (a[0] == b[0]) {
-                return Long.compare(a[1], b[1]);
-            }
-            return Long.compare(a[0], b[0]);
-        });
-
-        int cur = 0;
-        int peak = 0;
-        for (long[] e : events) {
-            cur += (int) e[1];
-            if (cur > peak) {
-                peak = cur;
-            }
-        }
-        return peak;
     }
 
     private int defaultZero(Integer value) {

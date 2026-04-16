@@ -1,15 +1,12 @@
 package com.llf.service.impl;
 
-import com.llf.dto.AnalyticsQueryDTO;
 import com.llf.mapper.AnalyticsMapper;
 import com.llf.service.AnalyticsService;
-import com.llf.vo.PageVO;
-import com.llf.vo.analytics.*;
+import com.llf.vo.admin.stats.AdminStatsVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -23,80 +20,10 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter LABEL_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
-    private static final String[] WEEKDAY_LABELS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+    private static final String[] WEEKDAY_LABELS = {"鍛ㄤ竴", "鍛ㄤ簩", "鍛ㄤ笁", "鍛ㄥ洓", "鍛ㄤ簲", "鍛ㄥ叚", "鍛ㄦ棩"};
 
     @Resource
     private AnalyticsMapper analyticsMapper;
-
-    private Timestamp ts(Long ms) {
-        return ms == null ? null : Timestamp.from(Instant.ofEpochMilli(ms));
-    }
-
-    private String dim(String d) {
-        if (d == null || d.isBlank()) return "week";
-        return d;
-    }
-
-    private int page(Integer p) { return (p == null || p < 1) ? 1 : p; }
-    private int size(Integer s) { return (s == null || s < 1) ? 10 : Math.min(s, 50); }
-
-    @Override
-    public AnalyticsOverviewVO overview(AnalyticsQueryDTO q) {
-        Timestamp start = ts(q.getStart());
-        Timestamp end = ts(q.getEnd());
-        String roomCode = q.getRoomCode();
-        String status = q.getStatus();
-        String dimension = dim(q.getDimension());
-
-        long total = analyticsMapper.countTotal(start, end, roomCode, status);
-        long cancelled = analyticsMapper.countTotal(start, end, roomCode, "CANCELLED");
-        long activeMinutes = analyticsMapper.sumActiveMinutes(start, end, roomCode);
-        long conflicts = analyticsMapper.countConflicts(start, end, roomCode);
-
-        // 使用率：sum(activeMinutes) / (rangeMinutes * roomCount) * 100
-        double utilization = 0;
-        if (start != null && end != null && end.getTime() > start.getTime()) {
-            long rangeMinutes = (end.getTime() - start.getTime()) / 60000;
-            long roomCount = (roomCode == null || roomCode.isBlank()) ? analyticsMapper.countRooms() : 1;
-            if (rangeMinutes > 0 && roomCount > 0) {
-                utilization = (activeMinutes * 1.0) / (rangeMinutes * roomCount) * 100.0;
-            }
-        }
-
-        double cancelRate = total == 0 ? 0 : (cancelled * 100.0 / total);
-
-        AnalyticsKpiVO kpi = new AnalyticsKpiVO();
-        kpi.setTotal(total);
-        kpi.setUtilization(round2(utilization));
-        kpi.setConflicts(conflicts);
-        kpi.setCancelRate(round2(cancelRate));
-
-        List<TrendPointVO> trend = analyticsMapper.trend(start, end, roomCode, status, dimension);
-        List<StatusCountVO> dist = analyticsMapper.statusDist(start, end, roomCode);
-        List<HeatmapCellVO> heatmap = analyticsMapper.heatmap(start, end, roomCode);
-        List<RoomRankingVO> rankings = analyticsMapper.rankings(start, end, roomCode, status);
-
-        int p = page(q.getPage());
-        int s = size(q.getSize());
-        int offset = (p - 1) * s;
-        List<ReservationDetailVO> records = analyticsMapper.details(start, end, roomCode, status, s, offset);
-        long dtTotal = analyticsMapper.detailsTotal(start, end, roomCode, status);
-
-        PageVO<ReservationDetailVO> pageVO = new PageVO<>();
-        pageVO.setPage(p);
-        pageVO.setSize(s);
-        pageVO.setTotal(dtTotal);
-        pageVO.setRecords(records);
-
-        AnalyticsOverviewVO vo = new AnalyticsOverviewVO();
-        vo.setKpi(kpi);
-        vo.setTrend(trend);
-        vo.setStatusDist(dist);
-        vo.setHeatmap(heatmap);
-        vo.setRankings(rankings);
-        vo.setDetails(pageVO);
-        return vo;
-    }
 
     @Override
     public AdminStatsVO adminStats(Integer days) {
@@ -141,33 +68,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return stats;
     }
 
-    @Override
-    public String exportCsv(AnalyticsQueryDTO q) {
-        AnalyticsOverviewVO ov = overview(q);
-        StringBuilder sb = new StringBuilder();
-        sb.append("id,title,roomCode,roomName,startTime,endTime,status\n");
-        for (ReservationDetailVO r : ov.getDetails().getRecords()) {
-            sb.append(r.getId()).append(",");
-            sb.append(escape(r.getTitle())).append(",");
-            sb.append(escape(r.getRoomCode())).append(",");
-            sb.append(escape(r.getRoomName())).append(",");
-            sb.append(r.getStartTime()).append(",");
-            sb.append(r.getEndTime()).append(",");
-            sb.append(escape(r.getStatus())).append("\n");
-        }
-        return sb.toString();
-    }
-
-    private String escape(String s) {
-        if (s == null) return "";
-        String v = s.replace("\"", "\"\"");
-        return "\"" + v + "\"";
-    }
-
-    private double round2(double v) {
-        return Math.round(v * 100.0) / 100.0;
-    }
-
     private int normalizeDays(Integer days) {
         if (days == null) {
             return 30;
@@ -185,12 +85,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                           long deviceCoverageRate,
                                           int maintenanceRooms) {
         AdminStatsVO.KpisVO kpis = new AdminStatsVO.KpisVO();
-        kpis.setTotalReservations(kpi("totalReservations", "近期开会预约", totalReservations, "次", "近窗口内预约总数", "primary"));
-        kpis.setActiveReservations(kpi("activeReservations", "进行中预约", activeReservations, "次", "当前状态仍为 ACTIVE", "success"));
-        kpis.setCancelledReservations(kpi("cancelledReservations", "已取消预约", cancelledReservations, "次", "近窗口内取消数量", "warning"));
-        kpis.setRoomCoverageRate(kpi("roomCoverageRate", "会议室设备覆盖率", roomCoverageRate, "%", "已绑定静态设备的会议室占比", "primary"));
-        kpis.setDeviceCoverageRate(kpi("deviceCoverageRate", "设备覆盖率", deviceCoverageRate, "%", "至少绑定到一个会议室的设备占比", "primary"));
-        kpis.setMaintenanceRooms(kpi("maintenanceRooms", "维护中会议室", maintenanceRooms, "间", "当前状态为 MAINTENANCE", "warning"));
+        kpis.setTotalReservations(kpi("totalReservations", "杩戞湡寮€浼氶绾?", totalReservations, "娆?", "杩戠獥鍙ｅ唴棰勭害鎬绘暟", "primary"));
+        kpis.setActiveReservations(kpi("activeReservations", "杩涜涓绾?", activeReservations, "娆?", "褰撳墠鐘舵€佷粛涓?ACTIVE", "success"));
+        kpis.setCancelledReservations(kpi("cancelledReservations", "宸插彇娑堥绾?", cancelledReservations, "娆?", "杩戠獥鍙ｅ唴鍙栨秷鏁伴噺", "warning"));
+        kpis.setRoomCoverageRate(kpi("roomCoverageRate", "浼氳瀹よ澶囪鐩栫巼", roomCoverageRate, "%", "宸茬粦瀹氶潤鎬佽澶囩殑浼氳瀹ゅ崰姣?", "primary"));
+        kpis.setDeviceCoverageRate(kpi("deviceCoverageRate", "璁惧瑕嗙洊鐜?", deviceCoverageRate, "%", "鑷冲皯缁戝畾鍒颁竴涓細璁鐨勮澶囧崰姣?", "primary"));
+        kpis.setMaintenanceRooms(kpi("maintenanceRooms", "缁存姢涓細璁", maintenanceRooms, "闂?", "褰撳墠鐘舵€佷负 MAINTENANCE", "warning"));
         return kpis;
     }
 
@@ -299,40 +199,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<AdminStatsVO.AlertVO> alerts = new ArrayList<>();
 
         for (AnalyticsMapper.MaintenanceRoomAlertRow row : analyticsMapper.selectMaintenanceRoomAlerts()) {
-            alerts.add(alert(
-                    "room_maintenance_" + row.roomId,
-                    "room_maintenance",
-                    row.roomName,
-                    row.roomName + " 当前处于维护状态",
-                    "warning"
-            ));
+            alerts.add(alert("room_maintenance_" + row.roomId, "room_maintenance", row.roomName, row.roomName + " 褰撳墠澶勪簬缁存姢鐘舵€?", "warning"));
         }
         for (AnalyticsMapper.UnboundRoomAlertRow row : analyticsMapper.selectUnboundRoomAlerts()) {
-            alerts.add(alert(
-                    "room_unbound_" + row.roomId,
-                    "room_unbound",
-                    row.roomName,
-                    row.roomName + " 尚未绑定任何静态设备",
-                    "warning"
-            ));
+            alerts.add(alert("room_unbound_" + row.roomId, "room_unbound", row.roomName, row.roomName + " 灏氭湭缁戝畾浠讳綍闈欐€佽澶?", "warning"));
         }
         for (AnalyticsMapper.DisabledBoundDeviceAlertRow row : analyticsMapper.selectDisabledBoundDeviceAlerts()) {
-            alerts.add(alert(
-                    "device_disabled_bound_" + row.deviceId,
-                    "device_disabled_bound",
-                    row.deviceName,
-                    row.deviceName + " 已停用但仍绑定在会议室中",
-                    "danger"
-            ));
+            alerts.add(alert("device_disabled_bound_" + row.deviceId, "device_disabled_bound", row.deviceName, row.deviceName + " 宸插仠鐢ㄤ絾浠嶇粦瀹氬湪浼氳瀹や腑", "danger"));
         }
         for (AnalyticsMapper.HighCancelRoomAlertRow row : analyticsMapper.selectHighCancelRoomAlerts(start, end)) {
-            alerts.add(alert(
-                    "room_high_cancel_" + row.roomId,
-                    "room_high_cancel",
-                    row.roomName,
-                    row.roomName + " 近期开会取消率偏高（" + defaultZeroLong(row.cancelledCount) + "/" + defaultZeroLong(row.reservationCount) + "）",
-                    "danger"
-            ));
+            String summary = row.roomName + " 杩戞湡寮€浼氬彇娑堢巼鍋忛珮锛?" + defaultZeroLong(row.cancelledCount) + "/" + defaultZeroLong(row.reservationCount) + "锛?";
+            alerts.add(alert("room_high_cancel_" + row.roomId, "room_high_cancel", row.roomName, summary, "danger"));
         }
         return alerts;
     }
@@ -362,7 +239,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             item.setStartTime(row.startTime);
             item.setEndTime(row.endTime);
             item.setStatus(row.status);
-            item.setDeviceSummary(row.deviceSummary == null || row.deviceSummary.isBlank() ? "未调用设备" : row.deviceSummary);
+            item.setDeviceSummary(row.deviceSummary == null || row.deviceSummary.isBlank() ? "鏈皟鐢ㄨ澶?" : row.deviceSummary);
             result.add(item);
         }
         return result;

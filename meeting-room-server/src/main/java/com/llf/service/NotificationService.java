@@ -1,11 +1,11 @@
 package com.llf.service;
 
-import com.llf.vo.NotificationItemVO;
-import com.llf.vo.NotificationReadAllResultVO;
-import com.llf.vo.NotificationReadResultVO;
-import com.llf.vo.NotificationSummaryVO;
-import com.llf.vo.NotificationTodoTargetVO;
-import com.llf.vo.PageResultVO;
+import com.llf.vo.notification.NotificationItemVO;
+import com.llf.vo.notification.NotificationReadAllResultVO;
+import com.llf.vo.notification.NotificationReadResultVO;
+import com.llf.vo.notification.NotificationSummaryVO;
+import com.llf.vo.notification.NotificationTodoTargetVO;
+import com.llf.vo.common.PageResultVO;
 
 import java.util.List;
 

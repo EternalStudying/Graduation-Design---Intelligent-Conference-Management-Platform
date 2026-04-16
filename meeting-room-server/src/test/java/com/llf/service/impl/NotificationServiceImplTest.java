@@ -2,11 +2,11 @@ package com.llf.service.impl;
 
 import com.llf.mapper.NotificationMapper;
 import com.llf.result.BizException;
-import com.llf.vo.NotificationItemVO;
-import com.llf.vo.NotificationReadAllResultVO;
-import com.llf.vo.NotificationReadResultVO;
-import com.llf.vo.NotificationSummaryVO;
-import com.llf.vo.PageResultVO;
+import com.llf.vo.notification.NotificationItemVO;
+import com.llf.vo.notification.NotificationReadAllResultVO;
+import com.llf.vo.notification.NotificationReadResultVO;
+import com.llf.vo.notification.NotificationSummaryVO;
+import com.llf.vo.common.PageResultVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -2,7 +2,7 @@ package com.llf.controller;
 
 import com.llf.result.R;
 import com.llf.service.DeviceAdminService;
-import com.llf.vo.DeviceBindingStatsVO;
+import com.llf.vo.admin.device.DeviceBindingStatsVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

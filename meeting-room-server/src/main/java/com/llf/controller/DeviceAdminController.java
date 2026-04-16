@@ -1,13 +1,11 @@
 package com.llf.controller;
 
-import com.llf.dto.AdminDeviceStatusDTO;
-import com.llf.dto.AdminDeviceUpsertDTO;
+import com.llf.dto.admin.device.AdminDeviceStatusDTO;
+import com.llf.dto.admin.device.AdminDeviceUpsertDTO;
 import com.llf.result.R;
 import com.llf.service.DeviceAdminService;
-import com.llf.vo.AdminDevicePageVO;
-import com.llf.vo.AdminDeviceVO;
-import com.llf.vo.DeviceAdminVO;
-import com.llf.vo.DeviceConcurrencyDetailVO;
+import com.llf.vo.admin.device.AdminDevicePageVO;
+import com.llf.vo.admin.device.AdminDeviceVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -15,11 +13,9 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @Validated
 @RestController
-@RequestMapping({"/api/devices/admin", "/api/v1/admin/devices"})
+@RequestMapping("/api/v1/admin/devices")
 public class DeviceAdminController {
 
     @Resource
@@ -36,12 +32,6 @@ public class DeviceAdminController {
     @GetMapping("/{id}")
     public R<AdminDeviceVO> detail(@PathVariable Long id) {
         return R.ok(deviceAdminService.adminDetail(id));
-    }
-
-    @GetMapping("/list")
-    public R<List<DeviceAdminVO>> list(@RequestParam(required = false) String keyword,
-                                      @RequestParam(required = false) String status) {
-        return R.ok(deviceAdminService.list(keyword, status));
     }
 
     @PostMapping
@@ -65,15 +55,5 @@ public class DeviceAdminController {
     public R<Void> delete(@PathVariable Long id) {
         deviceAdminService.adminDelete(id);
         return R.ok(null);
-    }
-
-    @GetMapping("/device-concurrency")
-    public R<?> stat() {
-        return R.ok(deviceAdminService.deviceConcurrencyStat());
-    }
-
-    @GetMapping("/device-concurrency/detail/{code}")
-    public R<DeviceConcurrencyDetailVO> detail(@PathVariable String code) {
-        return R.ok(deviceAdminService.deviceConcurrencyDetail(code));
     }
 }

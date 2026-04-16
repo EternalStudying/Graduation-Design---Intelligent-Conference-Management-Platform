@@ -1,9 +1,9 @@
 package com.llf.mapper;
 
-import com.llf.vo.RoomListItemVO;
-import com.llf.vo.RoomOptionVO;
-import com.llf.vo.RoomPageDeviceVO;
-import com.llf.vo.RoomPageItemVO;
+import com.llf.vo.room.RoomListItemVO;
+import com.llf.vo.room.RoomOptionVO;
+import com.llf.vo.room.RoomPageDeviceVO;
+import com.llf.vo.room.RoomPageItemVO;
 import lombok.Data;
 import org.apache.ibatis.annotations.*;
 
@@ -194,20 +194,6 @@ public interface RoomMapper {
                   status,
                   description
                 FROM meeting_room
-                ORDER BY name ASC, id ASC
-            """)
-    List<RoomOptionVO> selectOptions();
-
-    @Select("""
-                SELECT
-                  id,
-                  room_code AS roomCode,
-                  name,
-                  location,
-                  capacity,
-                  status,
-                  description
-                FROM meeting_room
                 WHERE status = 'AVAILABLE'
                 ORDER BY name ASC, id ASC
             """)
@@ -308,25 +294,6 @@ public interface RoomMapper {
 
     @Update("""
             UPDATE meeting_room
-            SET name = #{name},
-                location = #{location},
-                capacity = #{capacity},
-                status = #{status},
-                description = #{description},
-                maintenance_remark = #{maintenanceRemark},
-                updated_at = NOW()
-            WHERE room_code = #{roomCode}
-            """)
-    int updateRoomByCode(@Param("roomCode") String roomCode,
-                         @Param("name") String name,
-                         @Param("location") String location,
-                         @Param("capacity") Integer capacity,
-                         @Param("status") String status,
-                         @Param("description") String description,
-                         @Param("maintenanceRemark") String maintenanceRemark);
-
-    @Update("""
-            UPDATE meeting_room
             SET room_code = #{roomCode},
                 name = #{name},
                 location = #{location},
@@ -360,28 +327,13 @@ public interface RoomMapper {
     @Delete("DELETE FROM room_device WHERE room_id = #{roomId}")
     int deleteRoomDevices(@Param("roomId") Long roomId);
 
-    @Insert("INSERT INTO room_device(room_id, device_id, quantity) VALUES(#{roomId}, #{deviceId}, 1)")
-    int insertRoomDevice(@Param("roomId") Long roomId, @Param("deviceId") Long deviceId);
-
     @Insert("INSERT INTO room_device(room_id, device_id, quantity) VALUES(#{roomId}, #{deviceId}, #{quantity})")
     int insertRoomDeviceWithQuantity(@Param("roomId") Long roomId,
                                      @Param("deviceId") Long deviceId,
                                      @Param("quantity") Integer quantity);
 
-    @Delete("DELETE FROM meeting_room WHERE room_code = #{roomCode}")
-    int deleteRoomByCode(@Param("roomCode") String roomCode);
-
     @Delete("DELETE FROM meeting_room WHERE id = #{id}")
     int deleteRoomById(@Param("id") Long id);
-
-    @Select("""
-            SELECT d.id
-            FROM room_device rd
-            JOIN device d ON rd.device_id = d.id
-            WHERE rd.room_id = #{roomId}
-            ORDER BY d.id
-            """)
-    List<Long> selectDeviceIdsByRoomId(@Param("roomId") Long roomId);
 
     @Select("""
             <script>

@@ -1,17 +1,15 @@
 package com.llf.service.impl;
 
-import com.llf.dto.AdminRoomDevicesDTO;
-import com.llf.dto.AdminRoomStatusDTO;
-import com.llf.dto.RoomUpsertDTO;
+import com.llf.dto.admin.room.AdminRoomDevicesDTO;
+import com.llf.dto.admin.room.AdminRoomStatusDTO;
+import com.llf.dto.admin.room.RoomUpsertDTO;
 import com.llf.mapper.RoomMapper;
 import com.llf.result.BizException;
 import com.llf.service.RoomService;
-import com.llf.vo.RoomAdminDetailVO;
-import com.llf.vo.RoomListItemVO;
-import com.llf.vo.RoomPageDataVO;
-import com.llf.vo.RoomPageDeviceVO;
-import com.llf.vo.RoomPageItemVO;
-import com.llf.vo.RoomPageStatsVO;
+import com.llf.vo.room.RoomPageDataVO;
+import com.llf.vo.room.RoomPageDeviceVO;
+import com.llf.vo.room.RoomPageItemVO;
+import com.llf.vo.room.RoomPageStatsVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,15 +28,6 @@ public class RoomServiceImpl implements RoomService {
     private RoomMapper roomMapper;
 
     @Override
-    public List<RoomListItemVO> listRooms(String keyword, Long deviceId, Boolean onlyAvailable) {
-        List<RoomListItemVO> rooms = roomMapper.selectRooms(keyword, deviceId, onlyAvailable);
-        for (RoomListItemVO room : rooms) {
-            room.setDevices(roomMapper.selectDeviceNamesByRoomId(room.getId()));
-        }
-        return rooms;
-    }
-
-    @Override
     public RoomPageDataVO pageRooms(Integer currentPage,
                                     Integer size,
                                     String keyword,
@@ -46,77 +35,6 @@ public class RoomServiceImpl implements RoomService {
                                     String capacityType,
                                     String location) {
         return buildRoomPage(currentPage, size, keyword, status, capacityType, location);
-    }
-
-    @Override
-    @Transactional
-    public Long adminCreate(RoomUpsertDTO dto) {
-        validateRoomUpsert(dto, null);
-        roomMapper.insertRoom(
-                dto.getRoomCode().trim(),
-                dto.getName().trim(),
-                dto.getLocation().trim(),
-                dto.getCapacity(),
-                normalizeRoomStatus(dto.getStatus()),
-                trimToNull(dto.getDescription()),
-                normalizeMaintenanceRemark(dto.getStatus(), dto.getMaintenanceRemark())
-        );
-        Long roomId = roomMapper.selectIdByRoomCode(dto.getRoomCode().trim());
-        bindLegacyDevices(roomId, dto.getDeviceIds());
-        return roomId;
-    }
-
-    @Override
-    @Transactional
-    public void adminUpdate(RoomUpsertDTO dto) {
-        if (dto.getRoomCode() == null || dto.getRoomCode().isBlank()) {
-            throw new BizException(400, "roomCode must not be blank");
-        }
-        Long roomId = roomMapper.selectIdByRoomCode(dto.getRoomCode().trim());
-        if (roomId == null) {
-            throw new BizException(404, "room not found");
-        }
-
-        validateRoomUpsert(dto, roomId);
-        roomMapper.updateRoomById(
-                roomId,
-                dto.getRoomCode().trim(),
-                dto.getName().trim(),
-                dto.getLocation().trim(),
-                dto.getCapacity(),
-                normalizeRoomStatus(dto.getStatus()),
-                trimToNull(dto.getDescription()),
-                normalizeMaintenanceRemark(dto.getStatus(), dto.getMaintenanceRemark())
-        );
-        roomMapper.deleteRoomDevices(roomId);
-        bindLegacyDevices(roomId, dto.getDeviceIds());
-    }
-
-    @Override
-    @Transactional
-    public void adminDelete(String roomCode) {
-        if (roomCode == null || roomCode.isBlank()) {
-            return;
-        }
-        Long roomId = roomMapper.selectIdByRoomCode(roomCode.trim());
-        if (roomId == null) {
-            return;
-        }
-        roomMapper.deleteRoomDevices(roomId);
-        roomMapper.deleteRoomByCode(roomCode.trim());
-    }
-
-    @Override
-    public RoomAdminDetailVO adminDetail(String roomCode) {
-        Long roomId = roomMapper.selectIdByRoomCode(roomCode);
-        if (roomId == null) {
-            throw new BizException(404, "room not found");
-        }
-
-        RoomAdminDetailVO vo = new RoomAdminDetailVO();
-        vo.setRoomCode(roomCode);
-        vo.setDeviceIds(roomMapper.selectDeviceIdsByRoomId(roomId));
-        return vo;
     }
 
     @Override
@@ -248,18 +166,7 @@ public class RoomServiceImpl implements RoomService {
             }
         }
         room.setDeviceCount(totalQuantity);
-        room.setDeviceBindingSummary(devices.size() + " 类设备 / " + enabledKinds + " 类可用");
-    }
-
-    private void bindLegacyDevices(Long roomId, List<Long> deviceIds) {
-        if (deviceIds == null || deviceIds.isEmpty()) {
-            return;
-        }
-        for (Long deviceId : deviceIds) {
-            if (deviceId != null) {
-                roomMapper.insertRoomDevice(roomId, deviceId);
-            }
-        }
+        room.setDeviceBindingSummary(devices.size() + " 绫昏澶?/ " + enabledKinds + " 绫诲彲鐢?");
     }
 
     private void validateRoomUpsert(RoomUpsertDTO dto, Long roomId) {

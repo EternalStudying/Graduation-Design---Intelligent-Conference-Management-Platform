@@ -2,7 +2,7 @@ package com.llf.controller;
 
 import com.llf.result.R;
 import com.llf.service.AuthService;
-import com.llf.vo.UserInfoVO;
+import com.llf.vo.auth.UserInfoVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

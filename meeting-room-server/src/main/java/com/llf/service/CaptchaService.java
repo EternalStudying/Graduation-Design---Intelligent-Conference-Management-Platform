@@ -1,6 +1,6 @@
 package com.llf.service;
 
-import com.llf.vo.CaptchaVO;
+import com.llf.vo.auth.CaptchaVO;
 
 public interface CaptchaService {
 

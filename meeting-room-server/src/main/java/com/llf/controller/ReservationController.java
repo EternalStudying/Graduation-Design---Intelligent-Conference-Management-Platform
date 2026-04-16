@@ -2,14 +2,19 @@ package com.llf.controller;
 
 import com.llf.auth.AuthContext;
 import com.llf.dto.MyReservationCancelDTO;
+import com.llf.dto.MyReservationReviewDTO;
 import com.llf.dto.MyReservationUpdateDTO;
 import com.llf.dto.ReservationCreateDTO;
+import com.llf.dto.ReservationRecommendationDTO;
 import com.llf.mapper.ReservationMapper;
 import com.llf.result.R;
 import com.llf.service.ReservationService;
 import com.llf.vo.CalendarEventVO;
+import com.llf.vo.MyReservationReviewResultVO;
 import com.llf.vo.MyReservationVO;
+import com.llf.vo.PageResultVO;
 import com.llf.vo.ReservationCreateVO;
+import com.llf.vo.ReservationRecommendationVO;
 import com.llf.vo.RoomOptionVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -43,6 +48,11 @@ public class ReservationController {
         return R.ok(reservationService.create(dto, organizerId));
     }
 
+    @PostMapping("/recommendations")
+    public R<ReservationRecommendationVO> recommendations(@Valid @RequestBody ReservationRecommendationDTO dto) {
+        return R.ok(reservationService.recommend(dto));
+    }
+
     @PostMapping("/{id}/cancel")
     public R<String> cancel(@PathVariable Long id) {
         reservationService.cancel(id);
@@ -53,9 +63,20 @@ public class ReservationController {
     public R<List<MyReservationVO>> my(@RequestParam @NotBlank(message = "startDate must not be blank") String startDate,
                                        @RequestParam @NotBlank(message = "endDate must not be blank") String endDate,
                                        @RequestParam @NotBlank(message = "scope must not be blank") String scope,
-                                       @RequestParam(required = false) String status) {
+                                       @RequestParam(required = false) String status,
+                                       @RequestParam(required = false, defaultValue = "false") boolean futureOnly,
+                                       @RequestParam(required = false) Integer pageNum,
+                                       @RequestParam(required = false) Integer pageSize) {
         Long currentUserId = AuthContext.get().getId();
-        return R.ok(reservationService.myReservations(currentUserId, startDate, endDate, scope, status));
+        return R.ok(reservationService.myReservations(currentUserId, startDate, endDate, scope, status, futureOnly));
+    }
+
+    @GetMapping("/my/ended")
+    public R<PageResultVO<MyReservationVO>> myEnded(@RequestParam(required = false) String scope,
+                                                    @RequestParam(required = false) Integer pageNum,
+                                                    @RequestParam(required = false) Integer pageSize) {
+        Long currentUserId = AuthContext.get().getId();
+        return R.ok(reservationService.myEndedReservations(currentUserId, scope, pageNum, pageSize));
     }
 
     @GetMapping("/my/room-options")
@@ -75,6 +96,13 @@ public class ReservationController {
                                                   @Valid @RequestBody MyReservationCancelDTO dto) {
         Long currentUserId = AuthContext.get().getId();
         return R.ok(reservationService.cancelMyReservation(id, currentUserId, dto));
+    }
+
+    @PostMapping("/my/{id}/review")
+    public R<MyReservationReviewResultVO> reviewMyReservation(@PathVariable Long id,
+                                                              @Valid @RequestBody MyReservationReviewDTO dto) {
+        Long currentUserId = AuthContext.get().getId();
+        return R.ok(reservationService.submitMyReservationReview(id, currentUserId, dto));
     }
 
     @GetMapping("/active-count")

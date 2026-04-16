@@ -1,9 +1,12 @@
 package com.llf.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class MyReservationUpdateDTO {
@@ -27,4 +30,7 @@ public class MyReservationUpdateDTO {
     private Integer attendees;
 
     private String remark;
+
+    @Valid
+    private List<ReservationDeviceRequirementDTO> deviceRequirements;
 }

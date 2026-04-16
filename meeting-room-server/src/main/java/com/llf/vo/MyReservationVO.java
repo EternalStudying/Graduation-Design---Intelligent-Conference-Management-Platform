@@ -26,6 +26,8 @@ public class MyReservationVO {
     private String role;
     private Boolean canEdit;
     private Boolean canCancel;
+    private Boolean reviewed;
+    private ReservationReviewVO myReview;
     private List<DeviceVO> devices;
 
     @Data

@@ -1,5 +1,6 @@
 package com.llf.vo.analytics;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -10,7 +11,9 @@ public class ReservationDetailVO {
     private String title;
     private String roomCode;
     private String roomName;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private Timestamp startTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private Timestamp endTime;
     private String status;
 }

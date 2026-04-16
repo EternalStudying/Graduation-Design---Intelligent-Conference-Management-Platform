@@ -4,6 +4,7 @@ import com.llf.vo.RoomListItemVO;
 import com.llf.vo.RoomOptionVO;
 import com.llf.vo.RoomPageDeviceVO;
 import com.llf.vo.RoomPageItemVO;
+import lombok.Data;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -218,6 +219,38 @@ public interface RoomMapper {
                   room_code AS roomCode,
                   name,
                   location,
+                  capacity
+                FROM meeting_room
+                WHERE status = 'AVAILABLE'
+                  AND capacity >= #{attendees}
+                ORDER BY id ASC
+            """)
+    List<RecommendationRoomRow> selectRecommendationCandidates(@Param("attendees") Integer attendees);
+
+    @Select("""
+            <script>
+              SELECT
+                rd.room_id AS roomId,
+                rd.device_id AS deviceId,
+                rd.quantity AS quantity
+              FROM room_device rd
+              JOIN device d ON d.id = rd.device_id
+              WHERE d.status = 'ENABLED'
+                AND rd.room_id IN
+                <foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
+                  #{roomId}
+                </foreach>
+              ORDER BY rd.room_id ASC, rd.device_id ASC
+            </script>
+            """)
+    List<RoomDeviceAvailabilityRow> selectEnabledRoomDevices(@Param("roomIds") List<Long> roomIds);
+
+    @Select("""
+                SELECT
+                  id,
+                  room_code AS roomCode,
+                  name,
+                  location,
                   capacity,
                   status,
                   description
@@ -364,4 +397,20 @@ public interface RoomMapper {
 
     @Select("SELECT COUNT(*) FROM reservation WHERE room_id = #{roomId}")
     int countReservationsByRoomId(@Param("roomId") Long roomId);
+
+    @Data
+    class RecommendationRoomRow {
+        private Long id;
+        private String roomCode;
+        private String name;
+        private String location;
+        private Integer capacity;
+    }
+
+    @Data
+    class RoomDeviceAvailabilityRow {
+        private Long roomId;
+        private Long deviceId;
+        private Integer quantity;
+    }
 }

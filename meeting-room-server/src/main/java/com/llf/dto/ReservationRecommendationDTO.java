@@ -9,28 +9,21 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class ReservationCreateDTO {
+public class ReservationRecommendationDTO {
 
-    @NotNull(message = "roomId must not be null")
-    private Long roomId;
-
-    @NotBlank(message = "title must not be blank")
     private String title;
-
-    @NotBlank(message = "meetingDate must not be blank")
-    private String meetingDate;
-
-    @NotBlank(message = "startClock must not be blank")
-    private String startClock;
-
-    @NotBlank(message = "endClock must not be blank")
-    private String endClock;
 
     @NotNull(message = "attendees must not be null")
     @Min(value = 1, message = "attendees must be greater than 0")
     private Integer attendees;
 
-    private String remark;
+    @NotBlank(message = "startTime must not be blank")
+    private String startTime;
+
+    @NotBlank(message = "endTime must not be blank")
+    private String endTime;
+
+    private Long preferredRoomId;
 
     @Valid
     private List<ReservationDeviceRequirementDTO> deviceRequirements;

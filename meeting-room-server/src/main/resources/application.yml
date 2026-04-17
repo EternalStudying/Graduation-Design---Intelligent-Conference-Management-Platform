@@ -7,8 +7,24 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: http://127.0.0.1:11434
+      init:
+        pull-model-strategy: never
+      chat:
+        options:
+          model: qwen2.5:7b
 
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+assistant:
+  ai:
+    enabled: true
+    timeout-ms: 10000
+    max-output-tokens: 64

@@ -1,0 +1,436 @@
+[
+  {
+    "id": "case-001",
+    "userText": "我明天有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow"
+    },
+    "notes": "最常见的口语化查询"
+  },
+  {
+    "id": "case-002",
+    "userText": "帮我把明天下午那个会撤了",
+    "expectedActionType": "reservations.cancel",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow_afternoon"
+    },
+    "notes": "取消动作加相对时间和指代"
+  },
+  {
+    "id": "case-003",
+    "userText": "给我订个10个人的会议室",
+    "expectedActionType": "reservations.create",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "attendees": 10
+    },
+    "notes": "缺日期和时间，需要继续追问"
+  },
+  {
+    "id": "case-004",
+    "userText": "我这周开了几场会",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "this_week"
+    },
+    "notes": "查询当前用户本周预约数量"
+  },
+  {
+    "id": "case-005",
+    "userText": "把我明天下午那个会改晚一点",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow_afternoon",
+      "mutationHint": "delay_later"
+    },
+    "notes": "修改预约但没有明确新时间"
+  },
+  {
+    "id": "case-006",
+    "userText": "我想给上次那个会打个分",
+    "expectedActionType": "reservations.review",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "last",
+      "relativeTarget": "last"
+    },
+    "notes": "评价最近一次会议"
+  },
+  {
+    "id": "case-007",
+    "userText": "查下今天下午空着的会议室",
+    "expectedActionType": "rooms.search",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "today_afternoon"
+    },
+    "notes": "会议室搜索"
+  },
+  {
+    "id": "case-008",
+    "userText": "看看云杉会议室啥情况",
+    "expectedActionType": "rooms.detail",
+    "expectedNeedClarification": false,
+    "expectedFields": {},
+    "notes": "会议室详情"
+  },
+  {
+    "id": "case-009",
+    "userText": "今天有啥安排",
+    "expectedActionType": "overview.todaySchedule.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "today"
+    },
+    "notes": "今日排期"
+  },
+  {
+    "id": "case-010",
+    "userText": "看下概览",
+    "expectedActionType": "overview.summary.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {},
+    "notes": "概览统计"
+  },
+  {
+    "id": "case-011",
+    "userText": "帮我新建一个预约",
+    "expectedActionType": "reservations.create",
+    "expectedNeedClarification": true,
+    "expectedFields": {},
+    "notes": "创建动作但完全缺参"
+  },
+  {
+    "id": "case-012",
+    "userText": "我想约个明天下午两点到三点十个人的会",
+    "expectedActionType": "reservations.create",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "meetingDate": "2026-04-19",
+      "startClock": "14:00",
+      "endClock": "15:00",
+      "attendees": 10,
+      "timeRangeLabel": "tomorrow_afternoon"
+    },
+    "notes": "创建预约的核心槽位抽取"
+  },
+  {
+    "id": "case-013",
+    "userText": "帮我查下我后天的预约",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "day_after_tomorrow"
+    },
+    "notes": "后天查询"
+  },
+  {
+    "id": "case-014",
+    "userText": "我晚上有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "today_evening"
+    },
+    "notes": "晚上时段查询"
+  },
+  {
+    "id": "case-015",
+    "userText": "帮我查下下周一上午的安排",
+    "expectedActionType": "calendar.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "next_monday_morning"
+    },
+    "notes": "相对周次加时段"
+  },
+  {
+    "id": "case-016",
+    "userText": "我想看看会议室",
+    "expectedActionType": "rooms.search",
+    "expectedNeedClarification": false,
+    "expectedFields": {},
+    "notes": "模糊会议室浏览"
+  },
+  {
+    "id": "case-017",
+    "userText": "帮我把那个会撤掉",
+    "expectedActionType": "reservations.cancel",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine"
+    },
+    "notes": "没有时间和目标，必须澄清"
+  },
+  {
+    "id": "case-018",
+    "userText": "给上个会评个5分",
+    "expectedActionType": "reservations.review",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "last",
+      "relativeTarget": "last",
+      "rating": 5
+    },
+    "notes": "评价加评分"
+  },
+  {
+    "id": "case-019",
+    "userText": "我想把明天那个会改一下",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow"
+    },
+    "notes": "修改动作但缺少新值"
+  },
+  {
+    "id": "case-020",
+    "userText": "查下明天的日程",
+    "expectedActionType": "calendar.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "tomorrow"
+    },
+    "notes": "日程查询"
+  },
+  {
+    "id": "case-021",
+    "userText": "这周末我有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "this_weekend"
+    },
+    "notes": "周末表达"
+  },
+  {
+    "id": "case-022",
+    "userText": "下周末有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "next_weekend"
+    },
+    "notes": "下周末表达"
+  },
+  {
+    "id": "case-023",
+    "userText": "大后天上午我有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "day_3_from_today_morning"
+    },
+    "notes": "大后天上午"
+  },
+  {
+    "id": "case-024",
+    "userText": "今晚还有安排吗",
+    "expectedActionType": "overview.todaySchedule.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "today_evening"
+    },
+    "notes": "今晚安排"
+  },
+  {
+    "id": "case-025",
+    "userText": "明早有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow_morning"
+    },
+    "notes": "明早表达"
+  },
+  {
+    "id": "case-026",
+    "userText": "明天中午有安排吗",
+    "expectedActionType": "calendar.query",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "timeRangeLabel": "tomorrow_noon"
+    },
+    "notes": "中午时段"
+  },
+  {
+    "id": "case-027",
+    "userText": "下周二上午有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "next_tuesday_morning"
+    },
+    "notes": "工作日加时段"
+  },
+  {
+    "id": "case-028",
+    "userText": "下下周有会吗",
+    "expectedActionType": "reservations.list",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "week_after_next"
+    },
+    "notes": "更远一层周次"
+  },
+  {
+    "id": "case-029",
+    "userText": "给我订个能开视频会的房间",
+    "expectedActionType": "reservations.create",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "deviceRequirements": "视频会议"
+    },
+    "notes": "设备要求抽取"
+  },
+  {
+    "id": "case-030",
+    "userText": "找个带白板和投影的会议室",
+    "expectedActionType": "rooms.search",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "deviceRequirements": "投影、白板"
+    },
+    "notes": "多设备需求"
+  },
+  {
+    "id": "case-031",
+    "userText": "我要约一个八个人带白板的会",
+    "expectedActionType": "reservations.create",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "attendees": 8,
+      "deviceRequirements": "白板"
+    },
+    "notes": "中文人数和设备要求"
+  },
+  {
+    "id": "case-032",
+    "userText": "帮我找个二十个人的投影会议室",
+    "expectedActionType": "rooms.search",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "attendees": 20,
+      "deviceRequirements": "投影"
+    },
+    "notes": "中文人数搜索"
+  },
+  {
+    "id": "case-033",
+    "userText": "帮我找个十来个人的会议室",
+    "expectedActionType": "rooms.search",
+    "expectedNeedClarification": false,
+    "expectedFields": {
+      "attendees": 10
+    },
+    "notes": "模糊人数"
+  },
+  {
+    "id": "case-034",
+    "userText": "把上次那个会改到三点半",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "relativeTarget": "last",
+      "timeRangeLabel": "last",
+      "startClock": "15:30"
+    },
+    "notes": "指代加明确新时间"
+  },
+  {
+    "id": "case-035",
+    "userText": "把我明天下午那个会往后挪半小时",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow_afternoon",
+      "mutationHint": "delay_later",
+      "timeShiftMinutes": 30
+    },
+    "notes": "时间平移"
+  },
+  {
+    "id": "case-036",
+    "userText": "把我明天下午那个会提前一小时",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow_afternoon",
+      "mutationHint": "delay_earlier",
+      "timeShiftMinutes": 60
+    },
+    "notes": "提前一小时"
+  },
+  {
+    "id": "case-037",
+    "userText": "我要把明天那个会延长半小时",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow",
+      "mutationHint": "extend",
+      "timeShiftMinutes": 30
+    },
+    "notes": "延长半小时"
+  },
+  {
+    "id": "case-038",
+    "userText": "我要把明天那个会缩短半小时",
+    "expectedActionType": "reservations.update",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "tomorrow",
+      "mutationHint": "shorten",
+      "timeShiftMinutes": 30
+    },
+    "notes": "缩短半小时"
+  },
+  {
+    "id": "case-039",
+    "userText": "我想给上次那个会打五星",
+    "expectedActionType": "reservations.review",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine",
+      "timeRangeLabel": "last",
+      "relativeTarget": "last",
+      "rating": 5
+    },
+    "notes": "五星评价"
+  },
+  {
+    "id": "case-040",
+    "userText": "把那场会取消掉",
+    "expectedActionType": "reservations.cancel",
+    "expectedNeedClarification": true,
+    "expectedFields": {
+      "targetScope": "mine"
+    },
+    "notes": "短句取消"
+  }
+]

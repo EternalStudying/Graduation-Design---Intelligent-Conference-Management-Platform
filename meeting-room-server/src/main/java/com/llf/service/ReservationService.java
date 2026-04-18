@@ -24,6 +24,8 @@ public interface ReservationService {
 
     List<MyReservationVO> myReservations(Long currentUserId, String startDate, String endDate, String scope, String status, boolean futureOnly);
 
+    MyReservationVO myReservationDetail(Long id, Long currentUserId);
+
     PageResultVO<MyReservationVO> myEndedReservations(Long currentUserId, String scope, Integer pageNum, Integer pageSize);
 
     List<RoomOptionVO> myRoomOptions();

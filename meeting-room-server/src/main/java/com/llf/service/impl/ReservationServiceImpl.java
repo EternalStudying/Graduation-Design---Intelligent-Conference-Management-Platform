@@ -11,6 +11,7 @@ import com.llf.mapper.RoomMapper;
 import com.llf.result.BizException;
 import com.llf.service.NotificationService;
 import com.llf.service.ReservationService;
+import com.llf.service.UserService;
 import com.llf.util.DateTimeUtils;
 import com.llf.vo.reservation.CalendarEventVO;
 import com.llf.vo.reservation.MyReservationReviewResultVO;
@@ -22,6 +23,7 @@ import com.llf.vo.reservation.ReservationCreateVO;
 import com.llf.vo.reservation.ReservationRecommendationItemVO;
 import com.llf.vo.reservation.ReservationRecommendationVO;
 import com.llf.vo.room.RoomOptionVO;
+import com.llf.vo.user.UserOptionVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +55,8 @@ public class ReservationServiceImpl implements ReservationService {
     private RoomMapper roomMapper;
     @Resource
     private NotificationService notificationService;
+    @Resource
+    private UserService userService;
 
     private static final Set<String> MY_SCOPES = Set.of("all", "organizer", "participant");
     private static final Set<String> RESERVATION_STATUS = Set.of("ACTIVE", "ENDED", "CANCELLED");
@@ -128,6 +132,10 @@ public class ReservationServiceImpl implements ReservationService {
 
         Map<Long, Integer> requiredDevices = normalizeDeviceRequirements(dto.getDeviceRequirements());
         validateRoomDeviceRequirements(dto.getRoomId(), requiredDevices);
+        List<Long> participantUserIds = normalizeParticipantUserIds(dto.getParticipantUserIds());
+        if (participantUserIds == null) {
+            participantUserIds = List.of();
+        }
 
         String reservationNo = generateReservationNo();
         reservationMapper.insertReservation(
@@ -144,7 +152,9 @@ public class ReservationServiceImpl implements ReservationService {
         for (Map.Entry<Long, Integer> entry : requiredDevices.entrySet()) {
             reservationMapper.insertReservationDevice(reservationId, entry.getKey(), entry.getValue());
         }
+        rewriteReservationParticipants(reservationId, participantUserIds);
         ReservationCreateVO result = reservationMapper.selectCreateResultById(reservationId);
+        fillCreateParticipants(result);
         notificationService.createReservationCreatedNotification(
                 organizerId,
                 result.getTitle(),
@@ -218,7 +228,12 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         List<MyReservationVO> reservations = reservationMapper.selectMyReservations(currentUserId, start, end, scope, status);
-        return fillReservationReviews(currentUserId, fillReservationDevices(reservations));
+        return fillReservationReviews(currentUserId, fillReservationParticipants(fillReservationDevices(reservations)));
+    }
+
+    @Override
+    public MyReservationVO myReservationDetail(Long id, Long currentUserId) {
+        return requireMyReservationDetail(id, currentUserId);
     }
 
     @Override
@@ -234,7 +249,7 @@ public class ReservationServiceImpl implements ReservationService {
         List<MyReservationVO> reservations = total <= 0
                 ? List.of()
                 : reservationMapper.selectMyEndedReservationsPage(currentUserId, normalizedScope, resolvedPageSize, offset);
-        List<MyReservationVO> result = fillReservationReviews(currentUserId, fillReservationDevices(reservations));
+        List<MyReservationVO> result = fillReservationReviews(currentUserId, fillReservationParticipants(fillReservationDevices(reservations)));
 
         PageResultVO<MyReservationVO> pageResult = new PageResultVO<>();
         pageResult.setList(result);
@@ -278,6 +293,7 @@ public class ReservationServiceImpl implements ReservationService {
 
         Map<Long, Integer> requiredDevices = normalizeDeviceRequirements(dto.getDeviceRequirements());
         validateRoomDeviceRequirements(dto.getRoomId(), requiredDevices);
+        List<Long> participantUserIds = normalizeParticipantUserIds(dto.getParticipantUserIds());
 
         reservationMapper.updateMyReservation(
                 id,
@@ -291,6 +307,9 @@ public class ReservationServiceImpl implements ReservationService {
         reservationMapper.deleteReservationDevicesByReservationId(id);
         for (Map.Entry<Long, Integer> entry : requiredDevices.entrySet()) {
             reservationMapper.insertReservationDevice(id, entry.getKey(), entry.getValue());
+        }
+        if (participantUserIds != null) {
+            rewriteReservationParticipants(id, participantUserIds);
         }
         MyReservationVO result = requireMyReservationDetail(id, currentUserId);
         notificationService.createReservationUpdatedNotification(
@@ -401,6 +420,37 @@ public class ReservationServiceImpl implements ReservationService {
         return reservations;
     }
 
+    private List<MyReservationVO> fillReservationParticipants(List<MyReservationVO> reservations) {
+        if (reservations == null || reservations.isEmpty()) {
+            return List.of();
+        }
+
+        for (MyReservationVO reservation : reservations) {
+            reservation.setParticipants(new ArrayList<>());
+        }
+
+        List<Long> reservationIds = reservations.stream()
+                .map(MyReservationVO::getId)
+                .toList();
+
+        List<ReservationMapper.ReservationParticipantRow> participantRows = reservationMapper.selectReservationParticipants(reservationIds);
+        if (participantRows == null || participantRows.isEmpty()) {
+            return reservations;
+        }
+
+        Map<Long, List<UserOptionVO>> participantMap = participantRows.stream()
+                .collect(Collectors.groupingBy(
+                        ReservationMapper.ReservationParticipantRow::getReservationId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(this::toParticipantVO, Collectors.toList())
+                ));
+
+        for (MyReservationVO reservation : reservations) {
+            reservation.setParticipants(participantMap.getOrDefault(reservation.getId(), List.of()));
+        }
+        return reservations;
+    }
+
     private List<MyReservationVO> fillReservationReviews(Long currentUserId, List<MyReservationVO> reservations) {
         if (reservations == null || reservations.isEmpty()) {
             return List.of();
@@ -488,7 +538,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new BizException(404, "reservation not found");
         }
-        return fillReservationReviews(currentUserId, fillReservationDevices(List.of(reservation))).get(0);
+        return fillReservationReviews(currentUserId, fillReservationParticipants(fillReservationDevices(List.of(reservation)))).get(0);
     }
 
     private ReservationMapper.ReviewableReservationRow requireReviewableReservation(Long id, Long currentUserId) {
@@ -592,6 +642,34 @@ public class ReservationServiceImpl implements ReservationService {
             normalized.merge(requirement.getDeviceId(), requirement.getQuantity(), Integer::sum);
         }
         return normalized;
+    }
+
+    private List<Long> normalizeParticipantUserIds(List<Long> participantUserIds) {
+        if (participantUserIds == null) {
+            return null;
+        }
+        if (participantUserIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> normalizedIds = participantUserIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (normalizedIds.isEmpty()) {
+            return List.of();
+        }
+        List<UserOptionVO> users = userService.listActiveUsersByIds(normalizedIds);
+        if (users.size() != normalizedIds.size()) {
+            throw new BizException(400, "participant user does not exist");
+        }
+        return users.stream().map(UserOptionVO::getId).toList();
+    }
+
+    private void rewriteReservationParticipants(Long reservationId, List<Long> participantUserIds) {
+        reservationMapper.deleteReservationParticipantsByReservationId(reservationId);
+        for (Long participantUserId : participantUserIds) {
+            reservationMapper.insertReservationParticipant(reservationId, participantUserId);
+        }
     }
 
     private void validateRoomDeviceRequirements(Long roomId, Map<Long, Integer> requiredDevices) {
@@ -735,6 +813,30 @@ public class ReservationServiceImpl implements ReservationService {
 
     private String generateReservationNo() {
         return "RSV" + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(100, 1000);
+    }
+
+    private ReservationCreateVO fillCreateParticipants(ReservationCreateVO reservation) {
+        if (reservation == null || reservation.getId() == null) {
+            return reservation;
+        }
+        List<ReservationMapper.ReservationParticipantRow> participantRows = reservationMapper.selectReservationParticipants(List.of(reservation.getId()));
+        if (participantRows == null || participantRows.isEmpty()) {
+            reservation.setParticipants(List.of());
+            return reservation;
+        }
+        reservation.setParticipants(participantRows.stream()
+                .map(this::toParticipantVO)
+                .toList());
+        return reservation;
+    }
+
+    private UserOptionVO toParticipantVO(ReservationMapper.ReservationParticipantRow row) {
+        UserOptionVO vo = new UserOptionVO();
+        vo.setId(row.getUserId());
+        vo.setUsername(row.getUsername());
+        vo.setNickname(row.getDisplayName());
+        vo.setDisplayName(row.getDisplayName() + "（" + row.getUsername() + "）");
+        return vo;
     }
 
     private record DeviceMatchSummary(int requiredTypeCount, int matchedTypeCount, boolean fullyMatched) {

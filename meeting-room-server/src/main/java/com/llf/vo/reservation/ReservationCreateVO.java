@@ -2,6 +2,9 @@ package com.llf.vo.reservation;
 
 import lombok.Data;
 
+import java.util.List;
+import com.llf.vo.user.UserOptionVO;
+
 @Data
 public class ReservationCreateVO {
     private Long id;
@@ -14,5 +17,6 @@ public class ReservationCreateVO {
     private String endTime;
     private String status;
     private String remark;
+    private List<UserOptionVO> participants;
 }
 

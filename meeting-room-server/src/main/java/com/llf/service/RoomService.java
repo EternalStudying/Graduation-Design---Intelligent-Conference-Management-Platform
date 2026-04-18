@@ -14,6 +14,8 @@ public interface RoomService {
                              String capacityType,
                              String location);
 
+    RoomPageItemVO userDetailById(Long id);
+
     RoomPageDataVO adminPage(Integer currentPage,
                              Integer size,
                              String keyword,

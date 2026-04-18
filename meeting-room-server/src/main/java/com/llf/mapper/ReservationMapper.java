@@ -196,6 +196,19 @@ public interface ReservationMapper {
                                 @Param("deviceId") Long deviceId,
                                 @Param("quantity") Integer quantity);
 
+    @Insert("""
+            INSERT INTO reservation_participant(reservation_id, user_id, created_at)
+            VALUES(#{reservationId}, #{userId}, NOW())
+            """)
+    int insertReservationParticipant(@Param("reservationId") Long reservationId,
+                                     @Param("userId") Long userId);
+
+    @Delete("""
+            DELETE FROM reservation_participant
+            WHERE reservation_id = #{reservationId}
+            """)
+    int deleteReservationParticipantsByReservationId(@Param("reservationId") Long reservationId);
+
     @Delete("""
             DELETE FROM reservation_device
             WHERE reservation_id = #{reservationId}
@@ -473,6 +486,25 @@ public interface ReservationMapper {
     List<MyReservationVO.DeviceRow> selectMyReservationDevices(@Param("reservationIds") List<Long> reservationIds);
 
     @Select("""
+            <script>
+            SELECT
+              rp.reservation_id AS reservationId,
+              u.id AS id,
+              u.id AS userId,
+              u.username AS username,
+              u.display_name AS displayName
+            FROM reservation_participant rp
+            JOIN sys_user u ON u.id = rp.user_id
+            WHERE rp.reservation_id IN
+            <foreach collection="reservationIds" item="reservationId" open="(" separator="," close=")">
+              #{reservationId}
+            </foreach>
+            ORDER BY rp.reservation_id ASC, u.id ASC
+            </script>
+            """)
+    List<ReservationParticipantRow> selectReservationParticipants(@Param("reservationIds") List<Long> reservationIds);
+
+    @Select("""
             SELECT
                 id,
                 organizer_id AS organizerId,
@@ -692,5 +724,14 @@ public interface ReservationMapper {
         private Long reservationId;
         private Long userId;
         private String title;
+    }
+
+    @Data
+    class ReservationParticipantRow {
+        private Long reservationId;
+        private Long id;
+        private Long userId;
+        private String username;
+        private String displayName;
     }
 }

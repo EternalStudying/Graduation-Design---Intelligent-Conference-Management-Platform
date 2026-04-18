@@ -10,6 +10,7 @@ import com.llf.mapper.ReservationMapper;
 import com.llf.mapper.RoomMapper;
 import com.llf.result.BizException;
 import com.llf.service.NotificationService;
+import com.llf.service.UserService;
 import com.llf.vo.reservation.MyReservationReviewResultVO;
 import com.llf.vo.reservation.ReservationReviewVO;
 import com.llf.vo.common.PageResultVO;
@@ -19,6 +20,7 @@ import com.llf.vo.reservation.ReservationRecommendationVO;
 import com.llf.vo.reservation.MyReservationVO;
 import com.llf.vo.notification.NotificationTodoTargetVO;
 import com.llf.vo.room.RoomOptionVO;
+import com.llf.vo.user.UserOptionVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +55,9 @@ class ReservationServiceImplTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private ReservationServiceImpl reservationService;
@@ -359,6 +364,45 @@ class ReservationServiceImplTest {
     }
 
     @Test
+    void create_shouldPersistParticipantsWhenParticipantUserIdsProvided() {
+        ReservationCreateDTO dto = new ReservationCreateDTO();
+        dto.setRoomId(306L);
+        dto.setTitle("参会人创建");
+        dto.setMeetingDate("2026-04-15");
+        dto.setStartClock("09:00");
+        dto.setEndClock("10:00");
+        dto.setAttendees(6);
+        dto.setParticipantUserIds(List.of(101L, 102L, 101L));
+
+        RoomOptionVO room = new RoomOptionVO();
+        room.setId(306L);
+        room.setCapacity(8);
+        room.setStatus("AVAILABLE");
+        room.setName("云杉会议室");
+        when(roomMapper.selectOptionById(306L)).thenReturn(room);
+        when(reservationMapper.countConflictByRoomId(eq(306L), any(), any())).thenReturn(0);
+        when(userService.listActiveUsersByIds(List.of(101L, 102L))).thenReturn(List.of(
+                userOption(101L, "zhangsan", "张三"),
+                userOption(102L, "lisi", "李四")
+        ));
+        when(reservationMapper.lastInsertId()).thenReturn(1002L);
+        ReservationCreateVO createVO = new ReservationCreateVO();
+        createVO.setId(1002L);
+        createVO.setReservationNo("RSV1002");
+        when(reservationMapper.selectCreateResultById(1002L)).thenReturn(createVO);
+        when(reservationMapper.selectReservationParticipants(List.of(1002L))).thenReturn(List.of(
+                participantRow(1002L, 101L, "zhangsan", "张三"),
+                participantRow(1002L, 102L, "lisi", "李四")
+        ));
+
+        ReservationCreateVO result = reservationService.create(dto, 88L);
+
+        verify(reservationMapper).insertReservationParticipant(1002L, 101L);
+        verify(reservationMapper).insertReservationParticipant(1002L, 102L);
+        assertEquals(2, result.getParticipants().size());
+    }
+
+    @Test
     void updateMyReservation_shouldRejectWhenDeviceRequirementsCannotBeSatisfied() {
         MyReservationUpdateDTO dto = new MyReservationUpdateDTO();
         dto.setRoomId(401L);
@@ -433,6 +477,47 @@ class ReservationServiceImplTest {
         verify(reservationMapper, times(1)).insertReservationDevice(71L, 2L, 1);
         verify(reservationMapper, times(1)).insertReservationDevice(71L, 4L, 1);
         verify(notificationService).createReservationUpdatedNotification(9L, "棰勭害71", "浼氳瀹?1", "2026-04-15 09:00:00", "2026-04-15 10:00:00");
+    }
+
+    @Test
+    void updateMyReservation_shouldRewriteParticipantsWhenParticipantIdsProvided() {
+        MyReservationUpdateDTO dto = new MyReservationUpdateDTO();
+        dto.setRoomId(404L);
+        dto.setTitle("更新参会人");
+        dto.setMeetingDate("2026-04-16");
+        dto.setStartClock("10:30");
+        dto.setEndClock("12:00");
+        dto.setAttendees(4);
+        dto.setParticipantUserIds(List.of(201L, 202L, 201L));
+
+        ReservationMapper.ReservationEditableRow editableRow = editableReservationRow(74L, 9L, 404L);
+        when(reservationMapper.selectEditableReservation(74L, 9L)).thenReturn(editableRow);
+
+        RoomOptionVO room = new RoomOptionVO();
+        room.setId(404L);
+        room.setCapacity(8);
+        room.setStatus("AVAILABLE");
+        room.setName("潮汐会议室");
+        when(roomMapper.selectOptionById(404L)).thenReturn(room);
+        when(reservationMapper.countConflictExcludeSelf(eq(74L), eq(404L), any(), any())).thenReturn(0);
+        when(userService.listActiveUsersByIds(List.of(201L, 202L))).thenReturn(List.of(
+                userOption(201L, "wangwu", "王五"),
+                userOption(202L, "zhaoliu", "赵六")
+        ));
+        when(reservationMapper.selectMyReservationDetail(74L, 9L)).thenReturn(myReservationDetail(74L));
+        when(reservationMapper.selectMyReservationDevices(List.of(74L))).thenReturn(List.of());
+        when(reservationMapper.selectMyReservationReviews(9L, List.of(74L))).thenReturn(List.of());
+        when(reservationMapper.selectReservationParticipants(List.of(74L))).thenReturn(List.of(
+                participantRow(74L, 201L, "wangwu", "王五"),
+                participantRow(74L, 202L, "zhaoliu", "赵六")
+        ));
+
+        MyReservationVO result = reservationService.updateMyReservation(74L, 9L, dto);
+
+        verify(reservationMapper).deleteReservationParticipantsByReservationId(74L);
+        verify(reservationMapper).insertReservationParticipant(74L, 201L);
+        verify(reservationMapper).insertReservationParticipant(74L, 202L);
+        assertEquals(2, result.getParticipants().size());
     }
 
     @Test
@@ -603,6 +688,24 @@ class ReservationServiceImplTest {
     }
 
     @Test
+    void myReservations_shouldFillParticipantsWhenExists() {
+        MyReservationVO reservation = myReservationDetail(94L);
+        when(reservationMapper.selectMyReservations(eq(1L), any(), any(), eq("all"), eq("ACTIVE")))
+                .thenReturn(List.of(reservation));
+        when(reservationMapper.selectMyReservationDevices(List.of(94L))).thenReturn(List.of());
+        when(reservationMapper.selectMyReservationReviews(1L, List.of(94L))).thenReturn(List.of());
+        when(reservationMapper.selectReservationParticipants(List.of(94L))).thenReturn(List.of(
+                participantRow(94L, 301L, "zhangsan", "张三")
+        ));
+
+        List<MyReservationVO> result = reservationService.myReservations(1L, "2026-04-01 00:00:00", "2026-04-30 23:59:59", "all", "ACTIVE", false);
+
+        assertEquals(1, result.size());
+        assertEquals(1, result.get(0).getParticipants().size());
+        assertEquals(301L, result.get(0).getParticipants().get(0).getId());
+    }
+
+    @Test
     void myReservations_shouldClampStartToTodayWhenFutureOnlyIsTrue() {
         MyReservationVO reservation = myReservationDetail(92L);
         when(reservationMapper.selectMyReservations(eq(1L), any(), any(), eq("all"), eq("ACTIVE")))
@@ -695,6 +798,25 @@ class ReservationServiceImplTest {
         vo.setCancelReason("鍙栨秷鍘熷洜");
         vo.setDevices(List.of());
         return vo;
+    }
+
+    private UserOptionVO userOption(Long id, String username, String nickname) {
+        UserOptionVO vo = new UserOptionVO();
+        vo.setId(id);
+        vo.setUsername(username);
+        vo.setNickname(nickname);
+        vo.setDisplayName(nickname + "（" + username + "）");
+        return vo;
+    }
+
+    private ReservationMapper.ReservationParticipantRow participantRow(Long reservationId, Long userId, String username, String displayName) {
+        ReservationMapper.ReservationParticipantRow row = new ReservationMapper.ReservationParticipantRow();
+        row.setReservationId(reservationId);
+        row.setId(userId);
+        row.setUserId(userId);
+        row.setUsername(username);
+        row.setDisplayName(displayName);
+        return row;
     }
 
     private ReservationMapper.ReviewableReservationRow reviewableReservationRow(Long id, String status) {

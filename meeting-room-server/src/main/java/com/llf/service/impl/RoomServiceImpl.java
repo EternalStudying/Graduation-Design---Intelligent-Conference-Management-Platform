@@ -38,6 +38,16 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    public RoomPageItemVO userDetailById(Long id) {
+        RoomPageItemVO room = roomMapper.selectRoomById(id);
+        if (room == null) {
+            throw new BizException(404, "room not found");
+        }
+        fillRoomDevices(room);
+        return room;
+    }
+
+    @Override
     public RoomPageDataVO adminPage(Integer currentPage,
                                     Integer size,
                                     String keyword,

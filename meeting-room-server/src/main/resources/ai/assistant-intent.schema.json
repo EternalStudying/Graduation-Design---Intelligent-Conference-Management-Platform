@@ -1,0 +1,225 @@
+{
+  "type": "object",
+  "required": [
+    "normalizedText",
+    "actionType",
+    "confidence",
+    "needClarification",
+    "fields"
+  ],
+  "properties": {
+    "normalizedText": {
+      "type": "string"
+    },
+    "actionType": {
+      "type": "string",
+      "enum": [
+        "overview.summary.query",
+        "overview.todaySchedule.query",
+        "rooms.search",
+        "rooms.detail",
+        "calendar.query",
+        "reservations.list",
+        "reservations.detail",
+        "reservations.create",
+        "reservations.update",
+        "reservations.cancel",
+        "reservations.review",
+        "unknown"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "needClarification": {
+      "type": "boolean"
+    },
+    "clarificationReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fields": {
+      "type": "object",
+      "properties": {
+        "reservationId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "roomId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "roomName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "meetingDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dateFrom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dateTo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "startClock": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endClock": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attendees": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "rating": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "content": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deviceRequirements": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetScope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "mine",
+            "all"
+          ]
+        },
+        "timeRangeLabel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relativeTarget": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "last",
+            "recent",
+            "current"
+          ]
+        },
+        "mutationHint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "delay_later",
+            "delay_earlier",
+            "extend",
+            "shorten"
+          ]
+        },
+        "timeShiftMinutes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "quantityHint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "count"
+          ]
+        },
+        "participantUserIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "label"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "reservation",
+              "room"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

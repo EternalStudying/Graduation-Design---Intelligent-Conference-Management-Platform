@@ -3,6 +3,7 @@ package com.llf.vo.reservation;
 import lombok.Data;
 
 import java.util.List;
+import com.llf.vo.user.UserOptionVO;
 
 @Data
 public class MyReservationVO {
@@ -29,6 +30,7 @@ public class MyReservationVO {
     private Boolean reviewed;
     private ReservationReviewVO myReview;
     private List<DeviceVO> devices;
+    private List<UserOptionVO> participants;
 
     @Data
     public static class DeviceVO {

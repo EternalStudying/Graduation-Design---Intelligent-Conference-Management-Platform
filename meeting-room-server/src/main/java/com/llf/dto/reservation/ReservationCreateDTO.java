@@ -34,5 +34,7 @@ public class ReservationCreateDTO {
 
     @Valid
     private List<ReservationDeviceRequirementDTO> deviceRequirements;
+
+    private List<Long> participantUserIds;
 }
 

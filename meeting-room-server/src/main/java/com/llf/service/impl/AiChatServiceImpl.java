@@ -19,18 +19,26 @@ import com.llf.vo.reservation.ReservationRecommendationItemVO;
 import com.llf.vo.reservation.ReservationRecommendationVO;
 import com.llf.vo.room.RoomListItemVO;
 import com.llf.vo.room.RoomPageDeviceVO;
+import jakarta.annotation.PreDestroy;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,6 +72,9 @@ public class AiChatServiceImpl implements AiChatService {
     private static final Pattern POINT_TIME_PATTERN = Pattern.compile("(上午|下午|中午|晚上)?\\s*(\\d{1,2})点(半)?");
     private static final Pattern RANGE_TIME_PATTERN = Pattern.compile("(\\d{1,2}):(\\d{2})\\s*(?:到|至|-|~)\\s*(\\d{1,2}):(\\d{2})");
     private static final Pattern LOCATION_PATTERN = Pattern.compile("(\\d+号楼[^，。\\s]*)");
+    private static final long STREAM_TIMEOUT_MS = 0L;
+    private static final int STREAM_DELTA_CHUNK_SIZE = 12;
+    private static final String STREAM_ERROR_MESSAGE = "AI 服务暂时不可用，请稍后重试";
 
     private final AiChatSessionStore sessionStore;
     private final ReservationService reservationService;
@@ -71,6 +82,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final ReservationMapper reservationMapper;
     private final ReservationAssistantLlmClient llmClient;
     private final ReservationKnowledgeService knowledgeService;
+    private final ExecutorService streamExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public AiChatServiceImpl(AiChatSessionStore sessionStore,
                              ReservationService reservationService,
@@ -100,19 +112,56 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Override
     public AiChatResponseVO chat(AuthUser currentUser, String sessionId, String message, String scene) {
+        ChatContext context = prepareChat(currentUser, sessionId, message, scene);
+        return completeChat(context);
+    }
+
+    @Override
+    public SseEmitter streamChat(AuthUser currentUser, String sessionId, String message, String scene) {
+        SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+        streamExecutor.submit(() -> {
+            try {
+                ChatContext context = prepareChat(currentUser, sessionId, message, scene);
+                sendEvent(emitter, "start", startPayload(context.session().getSessionId()));
+
+                AiChatResponseVO response = completeChat(context);
+                // 当前上游模型调用仍是同步生成，这里先将完整答案拆成多个 delta 事件输出。
+                for (String delta : splitAnswer(response.getAnswer())) {
+                    sendEvent(emitter, "delta", deltaPayload(delta));
+                }
+                sendEvent(emitter, "done", donePayload(response));
+            } catch (Exception e) {
+                sendQuietly(emitter, "error", errorPayload(resolveStreamErrorMessage(e)));
+            } finally {
+                emitter.complete();
+            }
+        });
+        return emitter;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        streamExecutor.shutdownNow();
+    }
+
+    private ChatContext prepareChat(AuthUser currentUser, String sessionId, String message, String scene) {
         Long userId = requireUserId(currentUser);
         String normalizedMessage = normalizeMessage(message);
         AiChatSessionStore.Session session = sessionStore.getOrCreate(userId, sessionId);
         sessionStore.addUserMessage(session, normalizedMessage);
 
         AssistantReply reply = resolveReply(currentUser, session, normalizedMessage, scene);
-        String answer = tryGenerateAiAnswer(normalizedMessage, reply);
-        sessionStore.addAssistantMessage(session, answer);
+        return new ChatContext(session, normalizedMessage, reply);
+    }
+
+    private AiChatResponseVO completeChat(ChatContext context) {
+        String answer = tryGenerateAiAnswer(context.message(), context.reply());
+        sessionStore.addAssistantMessage(context.session(), answer);
 
         AiChatResponseVO vo = new AiChatResponseVO();
-        vo.setSessionId(session.getSessionId());
+        vo.setSessionId(context.session().getSessionId());
         vo.setAnswer(answer);
-        vo.setSuggestions(reply.suggestions());
+        vo.setSuggestions(context.reply().suggestions());
         return vo;
     }
 
@@ -701,6 +750,64 @@ public class AiChatServiceImpl implements AiChatService {
                 + end.toLocalTime().format(SHORT_TIME_FORMATTER);
     }
 
+    private List<String> splitAnswer(String answer) {
+        List<String> deltas = new ArrayList<>();
+        if (answer == null || answer.isBlank()) {
+            return deltas;
+        }
+
+        String normalized = answer.trim();
+        for (int start = 0; start < normalized.length(); start += STREAM_DELTA_CHUNK_SIZE) {
+            deltas.add(normalized.substring(start, Math.min(start + STREAM_DELTA_CHUNK_SIZE, normalized.length())));
+        }
+        return deltas;
+    }
+
+    private void sendEvent(SseEmitter emitter, String eventName, Object payload) throws IOException {
+        emitter.send(SseEmitter.event()
+                .name(eventName)
+                .data(payload, MediaType.APPLICATION_JSON));
+    }
+
+    private void sendQuietly(SseEmitter emitter, String eventName, Object payload) {
+        try {
+            sendEvent(emitter, eventName, payload);
+        } catch (IOException ignored) {
+        }
+    }
+
+    private Map<String, Object> startPayload(String sessionId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sessionId", sessionId);
+        return payload;
+    }
+
+    private Map<String, Object> deltaPayload(String delta) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("delta", delta);
+        return payload;
+    }
+
+    private Map<String, Object> donePayload(AiChatResponseVO response) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sessionId", response.getSessionId());
+        payload.put("suggestions", response.getSuggestions());
+        return payload;
+    }
+
+    private Map<String, Object> errorPayload(String message) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("message", message);
+        return payload;
+    }
+
+    private String resolveStreamErrorMessage(Exception e) {
+        if (e instanceof BizException bizException && bizException.getMessage() != null && !bizException.getMessage().isBlank()) {
+            return bizException.getMessage();
+        }
+        return STREAM_ERROR_MESSAGE;
+    }
+
     private String normalizeMessage(String message) {
         String value = message == null ? "" : message.trim();
         if (value.isEmpty()) {
@@ -738,5 +845,8 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private record AssistantReply(String answer, List<String> suggestions, String facts) {
+    }
+
+    private record ChatContext(AiChatSessionStore.Session session, String message, AssistantReply reply) {
     }
 }

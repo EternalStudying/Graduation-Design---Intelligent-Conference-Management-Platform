@@ -31,7 +31,7 @@ class SpringAiReservationAssistantLlmClientTest {
                 .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage("local answer")))));
 
         SpringAiReservationAssistantLlmClient client =
-                new SpringAiReservationAssistantLlmClient(chatModel, "qwen3:4b", true, 10000, 64);
+                new SpringAiReservationAssistantLlmClient(chatModel, "qwen2.5:7b", true, 10000);
         ReservationAssistantLlmRequest request = new ReservationAssistantLlmRequest(
                 "find a room",
                 "today 14:00-16:00, 10 attendees, 2 candidate rooms",
@@ -57,9 +57,9 @@ class SpringAiReservationAssistantLlmClientTest {
 
         OllamaChatOptions options = (OllamaChatOptions) prompt.getOptions();
         assertNotNull(options);
-        assertEquals("qwen3:4b", options.getModel());
+        assertEquals("qwen2.5:7b", options.getModel());
         assertEquals(Boolean.FALSE, options.toMap().get("think"));
-        assertEquals(64, options.toMap().get("num_predict"));
+        assertTrue(!options.toMap().containsKey("num_predict"));
     }
 
     @Test
@@ -71,7 +71,7 @@ class SpringAiReservationAssistantLlmClientTest {
         });
 
         SpringAiReservationAssistantLlmClient client =
-                new SpringAiReservationAssistantLlmClient(chatModel, "qwen3:4b", true, 50, 64);
+                new SpringAiReservationAssistantLlmClient(chatModel, "qwen2.5:7b", true, 50);
         ReservationAssistantLlmRequest request = new ReservationAssistantLlmRequest(
                 "check conflict",
                 "existing reservation at 15:00",

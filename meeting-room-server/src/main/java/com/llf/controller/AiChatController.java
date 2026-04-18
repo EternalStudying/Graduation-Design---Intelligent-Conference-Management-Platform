@@ -8,10 +8,12 @@ import com.llf.vo.assistant.AiChatResponseVO;
 import com.llf.vo.assistant.AiChatSessionVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/v1/ai/chat")
@@ -28,5 +30,10 @@ public class AiChatController {
     @PostMapping
     public R<AiChatResponseVO> chat(@Valid @RequestBody AiChatRequestDTO dto) {
         return R.ok(aiChatService.chat(AuthContext.get(), dto.getSessionId(), dto.getMessage(), dto.getScene()));
+    }
+
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamChat(@Valid @RequestBody AiChatRequestDTO dto) {
+        return aiChatService.streamChat(AuthContext.get(), dto.getSessionId(), dto.getMessage(), dto.getScene());
     }
 }

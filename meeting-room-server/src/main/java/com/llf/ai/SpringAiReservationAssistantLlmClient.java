@@ -34,20 +34,17 @@ public class SpringAiReservationAssistantLlmClient implements ReservationAssista
     private final String model;
     private final boolean enabled;
     private final long timeoutMs;
-    private final int maxOutputTokens;
     private final ExecutorService llmExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public SpringAiReservationAssistantLlmClient(
             ChatModel chatModel,
-            @Value("${spring.ai.ollama.chat.options.model:qwen3:4b}") String model,
+            @Value("${spring.ai.ollama.chat.options.model:qwen2.5:7b}") String model,
             @Value("${assistant.ai.enabled:true}") boolean enabled,
-            @Value("${assistant.ai.timeout-ms:10000}") long timeoutMs,
-            @Value("${assistant.ai.max-output-tokens:64}") int maxOutputTokens) {
+            @Value("${assistant.ai.timeout-ms:10000}") long timeoutMs) {
         this.chatModel = chatModel;
-        this.model = model == null || model.isBlank() ? "qwen3:4b" : model.trim();
+        this.model = model == null || model.isBlank() ? "qwen2.5:7b" : model.trim();
         this.enabled = enabled;
         this.timeoutMs = timeoutMs <= 0 ? 10000 : timeoutMs;
-        this.maxOutputTokens = maxOutputTokens <= 0 ? 64 : maxOutputTokens;
     }
 
     @Override
@@ -65,7 +62,6 @@ public class SpringAiReservationAssistantLlmClient implements ReservationAssista
                 OllamaChatOptions.builder()
                         .model(model)
                         .disableThinking()
-                        .numPredict(maxOutputTokens)
                         .build()
         );
 

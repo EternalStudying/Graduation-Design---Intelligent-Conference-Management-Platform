@@ -6,6 +6,7 @@ import com.llf.vo.notification.NotificationItemVO;
 import com.llf.vo.notification.NotificationReadAllResultVO;
 import com.llf.vo.notification.NotificationReadResultVO;
 import com.llf.vo.notification.NotificationSummaryVO;
+import com.llf.vo.notification.AdminNotificationPublishVO;
 import com.llf.vo.common.PageResultVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -109,6 +110,57 @@ class NotificationServiceImplTest {
                 null,
                 "success"
         );
+    }
+
+    @Test
+    void publishAdminNotification_shouldInsertMaintenanceNoticeForRecipients() {
+        when(notificationMapper.selectActiveNotificationRecipientIds("USERS")).thenReturn(List.of(1L, 2L));
+
+        AdminNotificationPublishVO result = notificationService.publishAdminNotification(
+                "MAINTENANCE",
+                "空调维护通知",
+                "今晚 22:00 将维护 A101 空调设备。",
+                "USERS"
+        );
+
+        assertEquals("MAINTENANCE", result.getType());
+        assertEquals("NOTICE", result.getCategory());
+        assertEquals("USERS", result.getRecipientScope());
+        assertEquals("空调维护通知", result.getTitle());
+        assertEquals(2, result.getPublishedCount());
+        verify(notificationMapper).insertNotification(
+                1L,
+                "NOTICE",
+                "空调维护通知",
+                "今晚 22:00 将维护 A101 空调设备。",
+                null,
+                null,
+                "维护通知",
+                "warning"
+        );
+        verify(notificationMapper).insertNotification(
+                2L,
+                "NOTICE",
+                "空调维护通知",
+                "今晚 22:00 将维护 A101 空调设备。",
+                null,
+                null,
+                "维护通知",
+                "warning"
+        );
+    }
+
+    @Test
+    void publishAdminNotification_shouldRejectInvalidType() {
+        BizException ex = assertThrows(BizException.class, () -> notificationService.publishAdminNotification(
+                "UNKNOWN",
+                "系统公告",
+                "公告内容",
+                "ALL"
+        ));
+
+        assertEquals(400, ex.getCode());
+        verify(notificationMapper, never()).selectActiveNotificationRecipientIds("ALL");
     }
 
     @Test

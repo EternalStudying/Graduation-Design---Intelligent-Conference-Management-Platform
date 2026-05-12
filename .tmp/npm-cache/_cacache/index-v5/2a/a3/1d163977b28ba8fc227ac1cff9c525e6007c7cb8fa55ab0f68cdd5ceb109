@@ -1,0 +1,2 @@
+
+be71ba9638735f6f400004395241da0675b2a710	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/jszip","integrity":null,"time":1776516171881,"size":"262","metadata":{"time":1776516171881,"url":"http://registry.npmmirror.com/jszip","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/jszip"},"options":{"compress":true},"status":301}}

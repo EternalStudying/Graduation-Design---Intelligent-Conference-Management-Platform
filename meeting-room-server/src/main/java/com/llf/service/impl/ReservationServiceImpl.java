@@ -13,6 +13,9 @@ import com.llf.service.NotificationService;
 import com.llf.service.ReservationService;
 import com.llf.service.UserService;
 import com.llf.util.DateTimeUtils;
+import com.llf.vo.admin.reservation.AdminReservationItemVO;
+import com.llf.vo.admin.reservation.AdminReservationPageVO;
+import com.llf.vo.admin.reservation.AdminReservationStatsVO;
 import com.llf.vo.reservation.CalendarEventVO;
 import com.llf.vo.reservation.MyReservationReviewResultVO;
 import com.llf.vo.reservation.MyReservationVO;
@@ -59,7 +62,7 @@ public class ReservationServiceImpl implements ReservationService {
     private UserService userService;
 
     private static final Set<String> MY_SCOPES = Set.of("all", "organizer", "participant");
-    private static final Set<String> RESERVATION_STATUS = Set.of("ACTIVE", "ENDED", "CANCELLED");
+    private static final Set<String> RESERVATION_STATUS = Set.of("PENDING", "ACTIVE", "ENDED", "CANCELLED", "REJECTED", "EXCEPTION");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int DEFAULT_PAGE_NUM = 1;
     private static final int DEFAULT_ENDED_PAGE_SIZE = 6;
@@ -73,7 +76,11 @@ public class ReservationServiceImpl implements ReservationService {
             throw new BizException(400, "endDate must be greater than startDate");
         }
 
-        List<CalendarEventVO> events = reservationMapper.selectCalendarEvents(startTime, endTime, roomId, status);
+        String normalizedStatus = normalizeReservationStatusNullable(status);
+        if (normalizedStatus == null) {
+            normalizedStatus = "ACTIVE";
+        }
+        List<CalendarEventVO> events = reservationMapper.selectCalendarEvents(startTime, endTime, roomId, normalizedStatus);
         if (events.isEmpty()) {
             return List.of();
         }
@@ -219,7 +226,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public List<MyReservationVO> myReservations(Long currentUserId, String startDate, String endDate, String scope, String status, boolean futureOnly) {
         validateScope(scope);
-        validateStatus(status);
+        String normalizedStatus = normalizeReservationStatusNullable(status);
 
         Timestamp start = resolveMyReservationStart(startDate, futureOnly);
         Timestamp end = DateTimeUtils.parseToTimestamp(endDate);
@@ -227,7 +234,7 @@ public class ReservationServiceImpl implements ReservationService {
             throw new BizException(400, "endDate must be greater than startDate");
         }
 
-        List<MyReservationVO> reservations = reservationMapper.selectMyReservations(currentUserId, start, end, scope, status);
+        List<MyReservationVO> reservations = reservationMapper.selectMyReservations(currentUserId, start, end, scope, normalizedStatus);
         return fillReservationReviews(currentUserId, fillReservationParticipants(fillReservationDevices(reservations)));
     }
 
@@ -257,6 +264,90 @@ public class ReservationServiceImpl implements ReservationService {
         pageResult.setPageNum(resolvedPageNum);
         pageResult.setPageSize(resolvedPageSize);
         return pageResult;
+    }
+
+    @Override
+    public AdminReservationPageVO adminReservations(Integer currentPage, Integer size, String keyword, String status) {
+        int resolvedPageNum = resolvePageNum(currentPage);
+        int resolvedPageSize = resolveAdminPageSize(size);
+        int offset = (resolvedPageNum - 1) * resolvedPageSize;
+        String normalizedStatus = normalizeReservationStatusNullable(status);
+        String normalizedKeyword = trimToNull(keyword);
+
+        Long total = reservationMapper.countAdminReservations(normalizedKeyword, normalizedStatus);
+        List<AdminReservationItemVO> list = total != null && total > 0
+                ? reservationMapper.selectAdminReservations(normalizedKeyword, normalizedStatus, resolvedPageSize, offset)
+                : List.of();
+
+        AdminReservationStatsVO stats = new AdminReservationStatsVO();
+        stats.setTotalCount(defaultZero(reservationMapper.countAdminReservationsByStatus(null)));
+        stats.setPendingCount(defaultZero(reservationMapper.countAdminReservationsByStatus("PENDING")));
+        stats.setActiveCount(defaultZero(reservationMapper.countAdminReservationsByStatus("ACTIVE")));
+        stats.setRejectedCount(defaultZero(reservationMapper.countAdminReservationsByStatus("REJECTED")));
+        stats.setExceptionCount(defaultZero(reservationMapper.countAdminReservationsByStatus("EXCEPTION")));
+
+        AdminReservationPageVO page = new AdminReservationPageVO();
+        page.setList(fillAdminReservationDetails(list));
+        page.setTotal(total == null ? 0L : total);
+        page.setStats(stats);
+        return page;
+    }
+
+    @Override
+    @Transactional
+    public AdminReservationItemVO adminApproveReservation(Long id, Long adminUserId, String remark) {
+        ReservationMapper.AdminReservationProcessRow reservation = requireAdminReservationProcess(id);
+        if (!"PENDING".equalsIgnoreCase(reservation.getStatus())) {
+            throw new BizException(400, "only pending reservation can be approved");
+        }
+
+        revalidateBeforeApprove(reservation);
+        int updated = reservationMapper.approveReservation(id, adminUserId, trimToNull(remark));
+        if (updated <= 0) {
+            throw new BizException(400, "reservation status changed");
+        }
+        notificationService.createReservationApprovedNotification(
+                reservation.getOrganizerId(),
+                reservation.getTitle(),
+                reservation.getRoomName(),
+                formatTimestamp(reservation.getStartTime()),
+                formatTimestamp(reservation.getEndTime())
+        );
+        return requireAdminReservationDetail(id);
+    }
+
+    @Override
+    @Transactional
+    public AdminReservationItemVO adminRejectReservation(Long id, Long adminUserId, String reason) {
+        String normalizedReason = requireReason(reason);
+        ReservationMapper.AdminReservationProcessRow reservation = requireAdminReservationProcess(id);
+        if (!"PENDING".equalsIgnoreCase(reservation.getStatus())) {
+            throw new BizException(400, "only pending reservation can be rejected");
+        }
+
+        int updated = reservationMapper.rejectReservation(id, adminUserId, normalizedReason);
+        if (updated <= 0) {
+            throw new BizException(400, "reservation status changed");
+        }
+        notificationService.createReservationRejectedNotification(reservation.getOrganizerId(), reservation.getTitle(), normalizedReason);
+        return requireAdminReservationDetail(id);
+    }
+
+    @Override
+    @Transactional
+    public AdminReservationItemVO adminExceptionReservation(Long id, Long adminUserId, String reason) {
+        String normalizedReason = requireReason(reason);
+        ReservationMapper.AdminReservationProcessRow reservation = requireAdminReservationProcess(id);
+        if (!"ACTIVE".equalsIgnoreCase(reservation.getStatus())) {
+            throw new BizException(400, "only active reservation can be marked exception");
+        }
+
+        int updated = reservationMapper.markReservationException(id, adminUserId, normalizedReason);
+        if (updated <= 0) {
+            throw new BizException(400, "reservation status changed");
+        }
+        notificationService.createReservationExceptionNotification(reservation.getOrganizerId(), reservation.getTitle(), normalizedReason);
+        return requireAdminReservationDetail(id);
     }
 
     @Override
@@ -391,6 +482,92 @@ public class ReservationServiceImpl implements ReservationService {
         vo.setQuantity(row.getQuantity());
         vo.setStatus(row.getStatus());
         return vo;
+    }
+
+    private List<AdminReservationItemVO> fillAdminReservationDetails(List<AdminReservationItemVO> reservations) {
+        if (reservations == null || reservations.isEmpty()) {
+            return List.of();
+        }
+
+        for (AdminReservationItemVO reservation : reservations) {
+            reservation.setDevices(new ArrayList<>());
+            reservation.setParticipants(new ArrayList<>());
+        }
+
+        List<Long> reservationIds = reservations.stream()
+                .map(AdminReservationItemVO::getId)
+                .toList();
+
+        Map<Long, List<MyReservationVO.DeviceVO>> deviceMap = reservationMapper.selectMyReservationDevices(reservationIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        MyReservationVO.DeviceRow::getReservationId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(this::toMyReservationDeviceVO, Collectors.toList())
+                ));
+
+        List<ReservationMapper.ReservationParticipantRow> participantRows = reservationMapper.selectReservationParticipants(reservationIds);
+        Map<Long, List<UserOptionVO>> participantMap = participantRows == null || participantRows.isEmpty()
+                ? Map.of()
+                : participantRows.stream()
+                .collect(Collectors.groupingBy(
+                        ReservationMapper.ReservationParticipantRow::getReservationId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(this::toParticipantVO, Collectors.toList())
+                ));
+
+        for (AdminReservationItemVO reservation : reservations) {
+            reservation.setDevices(deviceMap.getOrDefault(reservation.getId(), List.of()));
+            reservation.setParticipants(participantMap.getOrDefault(reservation.getId(), List.of()));
+        }
+        return reservations;
+    }
+
+    private AdminReservationItemVO requireAdminReservationDetail(Long id) {
+        AdminReservationItemVO reservation = reservationMapper.selectAdminReservationById(id);
+        if (reservation == null) {
+            throw new BizException(404, "reservation not found");
+        }
+        return fillAdminReservationDetails(List.of(reservation)).get(0);
+    }
+
+    private ReservationMapper.AdminReservationProcessRow requireAdminReservationProcess(Long id) {
+        ReservationMapper.AdminReservationProcessRow reservation = reservationMapper.selectAdminReservationProcessById(id);
+        if (reservation == null) {
+            throw new BizException(404, "reservation not found");
+        }
+        return reservation;
+    }
+
+    private void revalidateBeforeApprove(ReservationMapper.AdminReservationProcessRow reservation) {
+        RoomOptionVO room = roomMapper.selectOptionById(reservation.getRoomId());
+        if (room == null) {
+            throw new BizException(404, "room not found");
+        }
+        if (!"AVAILABLE".equalsIgnoreCase(room.getStatus())) {
+            throw new BizException(400, "room is under maintenance");
+        }
+        if (reservation.getAttendees() != null && room.getCapacity() != null && reservation.getAttendees() > room.getCapacity()) {
+            throw new BizException(400, "attendees exceeds room capacity");
+        }
+        if (reservationMapper.countConflictExcludeSelf(reservation.getId(), reservation.getRoomId(), reservation.getStartTime(), reservation.getEndTime()) > 0) {
+            throw new BizException(400, "reservation time conflicts with another active reservation");
+        }
+        validateRoomDeviceRequirements(reservation.getRoomId(), loadReservationDeviceRequirements(reservation.getId()));
+    }
+
+    private Map<Long, Integer> loadReservationDeviceRequirements(Long reservationId) {
+        List<MyReservationVO.DeviceRow> rows = reservationMapper.selectMyReservationDevices(List.of(reservationId));
+        if (rows == null || rows.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Integer> requirements = new LinkedHashMap<>();
+        for (MyReservationVO.DeviceRow row : rows) {
+            if (row.getDeviceId() != null && row.getQuantity() != null) {
+                requirements.merge(row.getDeviceId(), row.getQuantity(), Integer::sum);
+            }
+        }
+        return requirements;
     }
 
     private List<MyReservationVO> fillReservationDevices(List<MyReservationVO> reservations) {
@@ -556,17 +733,40 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    private void validateStatus(String status) {
-        if (status != null && !status.isBlank() && !RESERVATION_STATUS.contains(status)) {
-            throw new BizException(400, "status must be one of ACTIVE, ENDED, CANCELLED");
-        }
-    }
-
     private String normalizeScope(String scope) {
         if (scope == null || scope.isBlank()) {
             return "all";
         }
         return scope.trim().toLowerCase();
+    }
+
+    private String normalizeReservationStatusNullable(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        String value = status.trim();
+        if ("1".equals(value)) {
+            return "PENDING";
+        }
+        if ("2".equals(value)) {
+            return "ACTIVE";
+        }
+        if ("3".equals(value)) {
+            return "ENDED";
+        }
+        if ("4".equals(value)) {
+            return "CANCELLED";
+        }
+        if ("5".equals(value)) {
+            return "REJECTED";
+        }
+        if ("6".equals(value)) {
+            return "EXCEPTION";
+        }
+        if (!RESERVATION_STATUS.contains(value)) {
+            throw new BizException(400, "status must be one of PENDING, ACTIVE, ENDED, CANCELLED, REJECTED, EXCEPTION");
+        }
+        return value;
     }
 
     private int resolvePageNum(Integer pageNum) {
@@ -581,6 +781,32 @@ public class ReservationServiceImpl implements ReservationService {
             return DEFAULT_ENDED_PAGE_SIZE;
         }
         return Math.min(pageSize, MAX_PAGE_SIZE);
+    }
+
+    private int resolveAdminPageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return DEFAULT_ENDED_PAGE_SIZE;
+        }
+        return Math.min(pageSize, MAX_PAGE_SIZE);
+    }
+
+    private String requireReason(String reason) {
+        String value = trimToNull(reason);
+        if (value == null) {
+            throw new BizException(400, "reason must not be blank");
+        }
+        return value;
+    }
+
+    private String formatTimestamp(Timestamp timestamp) {
+        if (timestamp == null) {
+            return null;
+        }
+        return timestamp.toLocalDateTime().format(DATE_TIME_FORMATTER);
+    }
+
+    private int defaultZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private Timestamp resolveMyReservationStart(String startDate, boolean futureOnly) {

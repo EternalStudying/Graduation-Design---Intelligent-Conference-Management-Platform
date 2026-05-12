@@ -29,6 +29,15 @@ public class AiAssistantActionRegistry {
             return null;
         }
         String normalized = message.trim().toLowerCase(Locale.ROOT);
+        if (containsAny(normalized, "待审核预约", "待审批预约", "待处理预约")) {
+            return "admin.reservations.pending";
+        }
+        if (containsAny(normalized, "通过预约", "批准预约", "同意预约", "审核通过")) {
+            return "admin.reservations.approve";
+        }
+        if (containsAny(normalized, "驳回预约", "拒绝预约", "审核驳回")) {
+            return "admin.reservations.reject";
+        }
         if (containsAny(normalized, "今日安排", "今天安排", "今日日程", "今天日程")) {
             return "overview.todaySchedule.query";
         }

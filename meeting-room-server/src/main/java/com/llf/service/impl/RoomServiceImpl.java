@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -33,8 +34,9 @@ public class RoomServiceImpl implements RoomService {
                                     String keyword,
                                     String status,
                                     String capacityType,
-                                    String location) {
-        return buildRoomPage(currentPage, size, keyword, status, capacityType, location);
+                                    String location,
+                                    String deviceIds) {
+        return buildRoomPage(currentPage, size, keyword, status, capacityType, location, parseDeviceIds(deviceIds));
     }
 
     @Override
@@ -54,8 +56,9 @@ public class RoomServiceImpl implements RoomService {
                                     String status,
                                     String capacityType,
                                     String location) {
-        validatePageFilters(status, capacityType);
-        return buildRoomPage(currentPage, size, keyword, status, capacityType, location);
+        String normalizedStatus = normalizeRoomStatusNullable(status);
+        validatePageFilters(normalizedStatus, capacityType);
+        return buildRoomPage(currentPage, size, keyword, normalizedStatus, capacityType, location, null);
     }
 
     @Override
@@ -138,11 +141,14 @@ public class RoomServiceImpl implements RoomService {
                                          String keyword,
                                          String status,
                                          String capacityType,
-                                         String location) {
+                                         String location,
+                                         List<Long> deviceIds) {
+        String normalizedStatus = normalizeRoomStatusNullable(status);
         int offset = (currentPage - 1) * size;
-        Long total = roomMapper.countRoomsForPage(keyword, status, capacityType, location);
+        int deviceCount = deviceIds == null ? 0 : deviceIds.size();
+        Long total = roomMapper.countRoomsForPage(keyword, normalizedStatus, capacityType, location, deviceIds, deviceCount);
         List<RoomPageItemVO> list = total != null && total > 0
-                ? roomMapper.selectRoomPage(keyword, status, capacityType, location, offset, size)
+                ? roomMapper.selectRoomPage(keyword, normalizedStatus, capacityType, location, deviceIds, deviceCount, offset, size)
                 : new ArrayList<>();
 
         for (RoomPageItemVO room : list) {
@@ -206,7 +212,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private void validatePageFilters(String status, String capacityType) {
-        if (status != null && !status.isBlank() && !ROOM_STATUS.contains(status)) {
+        if (status != null && !status.isBlank() && !ROOM_STATUS.contains(normalizeRoomStatus(status))) {
             throw new BizException(400, "status must be one of AVAILABLE, MAINTENANCE");
         }
         if (capacityType != null
@@ -249,10 +255,23 @@ public class RoomServiceImpl implements RoomService {
 
     private String normalizeRoomStatus(String status) {
         String value = status == null || status.isBlank() ? "AVAILABLE" : status.trim();
+        if ("1".equals(value)) {
+            return "AVAILABLE";
+        }
+        if ("2".equals(value)) {
+            return "MAINTENANCE";
+        }
         if (!ROOM_STATUS.contains(value)) {
             throw new BizException(400, "status must be one of AVAILABLE, MAINTENANCE");
         }
         return value;
+    }
+
+    private String normalizeRoomStatusNullable(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        return normalizeRoomStatus(status);
     }
 
     private String normalizeMaintenanceRemark(String status, String maintenanceRemark) {
@@ -268,6 +287,30 @@ public class RoomServiceImpl implements RoomService {
         }
         String value = text.trim();
         return value.isEmpty() ? null : value;
+    }
+
+    private List<Long> parseDeviceIds(String deviceIds) {
+        if (deviceIds == null || deviceIds.isBlank()) {
+            return null;
+        }
+
+        Set<Long> values = new LinkedHashSet<>();
+        for (String part : deviceIds.split(",")) {
+            String value = part.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                Long id = Long.valueOf(value);
+                if (id <= 0) {
+                    throw new NumberFormatException("device id must be positive");
+                }
+                values.add(id);
+            } catch (NumberFormatException e) {
+                throw new BizException(400, "deviceIds must be comma-separated positive numbers");
+            }
+        }
+        return values.isEmpty() ? null : new ArrayList<>(values);
     }
 
     private int defaultZero(Integer value) {

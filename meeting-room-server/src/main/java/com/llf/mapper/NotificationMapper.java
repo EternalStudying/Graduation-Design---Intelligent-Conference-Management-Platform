@@ -97,6 +97,24 @@ public interface NotificationMapper {
     int markAllReadByCategory(@Param("userId") Long userId,
                               @Param("category") String category);
 
+    @Select("""
+            <script>
+            SELECT id
+            FROM sys_user
+            WHERE CONCAT(status, '') IN ('ACTIVE', '1')
+            <choose>
+              <when test="recipientScope == 'USERS'">
+                AND (UPPER(CONCAT(role, '')) = 'USER' OR CONCAT(role, '') = '1')
+              </when>
+              <when test="recipientScope == 'ADMINS'">
+                AND (UPPER(CONCAT(role, '')) = 'ADMIN' OR CONCAT(role, '') = '2')
+              </when>
+            </choose>
+            ORDER BY id ASC
+            </script>
+            """)
+    List<Long> selectActiveNotificationRecipientIds(@Param("recipientScope") String recipientScope);
+
     @Insert("""
             INSERT INTO notification(
               user_id,

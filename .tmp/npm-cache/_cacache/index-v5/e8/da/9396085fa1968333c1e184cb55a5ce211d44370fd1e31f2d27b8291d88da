@@ -1,0 +1,2 @@
+
+d10b55dab3d0ed430394fb99694401ffeccb203e	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/sax","integrity":null,"time":1776516172088,"size":"262","metadata":{"time":1776516172088,"url":"http://registry.npmmirror.com/sax","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/sax"},"options":{"compress":true},"status":301}}

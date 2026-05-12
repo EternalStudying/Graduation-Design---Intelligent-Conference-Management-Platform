@@ -1,0 +1,2 @@
+
+592d53717bced620d30071a6aec44990760a8a27	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/core-util-is","integrity":null,"time":1776516172157,"size":"262","metadata":{"time":1776516172157,"url":"http://registry.npmmirror.com/core-util-is","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/core-util-is"},"options":{"compress":true},"status":301}}

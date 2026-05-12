@@ -27,7 +27,18 @@ public interface AnalyticsMapper {
                 FROM reservation
                 WHERE start_time >= #{start}
                   AND start_time < #{end}
-                  AND status = #{status}
+                  AND (
+                    CONCAT(status, '') = #{status}
+                    OR CONCAT(status, '') = CASE #{status}
+                      WHEN 'PENDING' THEN '1'
+                      WHEN 'ACTIVE' THEN '2'
+                      WHEN 'ENDED' THEN '3'
+                      WHEN 'CANCELLED' THEN '4'
+                      WHEN 'REJECTED' THEN '5'
+                      WHEN 'EXCEPTION' THEN '6'
+                      ELSE #{status}
+                    END
+                  )
             """)
     long countRecentReservationsByStatus(@Param("start") Timestamp start,
                                          @Param("end") Timestamp end,
@@ -42,13 +53,13 @@ public interface AnalyticsMapper {
     @Select("SELECT COUNT(1) FROM device")
     Integer countAllDevices();
 
-    @Select("SELECT COUNT(1) FROM device WHERE status = 'ENABLED'")
+    @Select("SELECT COUNT(1) FROM device WHERE CONCAT(status, '') IN ('ENABLED', '1')")
     Integer countEnabledDevices();
 
-    @Select("SELECT COUNT(1) FROM device WHERE status = 'DISABLED'")
+    @Select("SELECT COUNT(1) FROM device WHERE CONCAT(status, '') IN ('DISABLED', '0')")
     Integer countDisabledDevices();
 
-    @Select("SELECT COUNT(1) FROM meeting_room WHERE status = 'MAINTENANCE'")
+    @Select("SELECT COUNT(1) FROM meeting_room WHERE CONCAT(status, '') IN ('MAINTENANCE', '2')")
     Integer countMaintenanceRooms();
 
     @Select("""
@@ -100,8 +111,8 @@ public interface AnalyticsMapper {
                   m.name AS roomName,
                   m.location AS location,
                   COUNT(r.id) AS reservationCount,
-                  COALESCE(SUM(CASE WHEN r.status = 'ACTIVE' THEN 1 ELSE 0 END), 0) AS activeCount,
-                  COALESCE(SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END), 0) AS cancelledCount
+                  COALESCE(SUM(CASE WHEN CONCAT(r.status, '') IN ('ACTIVE', '2') THEN 1 ELSE 0 END), 0) AS activeCount,
+                  COALESCE(SUM(CASE WHEN CONCAT(r.status, '') IN ('CANCELLED', '4') THEN 1 ELSE 0 END), 0) AS cancelledCount
                 FROM reservation r
                 JOIN meeting_room m ON m.id = r.room_id
                 WHERE r.start_time >= #{start}
@@ -118,7 +129,11 @@ public interface AnalyticsMapper {
                   d.id AS deviceId,
                   d.device_code AS deviceCode,
                   d.name AS deviceName,
-                  d.status AS status,
+                  CASE CONCAT(d.status, '')
+                    WHEN '1' THEN 'ENABLED'
+                    WHEN '0' THEN 'DISABLED'
+                    ELSE CONCAT(d.status, '')
+                  END AS status,
                   COALESCE(SUM(rd.quantity), 0) AS usageQuantity,
                   COUNT(DISTINCT rd.reservation_id) AS reservationCount
                 FROM reservation_device rd
@@ -138,7 +153,7 @@ public interface AnalyticsMapper {
                   m.id AS roomId,
                   m.name AS roomName
                 FROM meeting_room m
-                WHERE m.status = 'MAINTENANCE'
+                WHERE CONCAT(m.status, '') IN ('MAINTENANCE', '2')
                 ORDER BY m.room_code ASC, m.id ASC
             """)
     List<MaintenanceRoomAlertRow> selectMaintenanceRoomAlerts();
@@ -162,7 +177,7 @@ public interface AnalyticsMapper {
                   d.id AS deviceId,
                   d.name AS deviceName
                 FROM device d
-                WHERE d.status = 'DISABLED'
+                WHERE CONCAT(d.status, '') IN ('DISABLED', '0')
                   AND EXISTS (
                     SELECT 1
                     FROM room_device rd
@@ -177,14 +192,14 @@ public interface AnalyticsMapper {
                   m.id AS roomId,
                   m.name AS roomName,
                   COUNT(r.id) AS reservationCount,
-                  COALESCE(SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END), 0) AS cancelledCount
+                  COALESCE(SUM(CASE WHEN CONCAT(r.status, '') IN ('CANCELLED', '4') THEN 1 ELSE 0 END), 0) AS cancelledCount
                 FROM reservation r
                 JOIN meeting_room m ON m.id = r.room_id
                 WHERE r.start_time >= #{start}
                   AND r.start_time < #{end}
                 GROUP BY m.id, m.name
                 HAVING COUNT(r.id) >= 2
-                   AND COALESCE(SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END), 0) * 1.0 / COUNT(r.id) >= 0.4
+                   AND COALESCE(SUM(CASE WHEN CONCAT(r.status, '') IN ('CANCELLED', '4') THEN 1 ELSE 0 END), 0) * 1.0 / COUNT(r.id) >= 0.4
                 ORDER BY reservationCount DESC, cancelledCount DESC, m.id ASC
             """)
     List<HighCancelRoomAlertRow> selectHighCancelRoomAlerts(@Param("start") Timestamp start,
@@ -199,7 +214,15 @@ public interface AnalyticsMapper {
                   u.display_name AS organizerName,
                   DATE_FORMAT(r.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
                   DATE_FORMAT(r.end_time, '%Y-%m-%d %H:%i:%s') AS endTime,
-                  r.status,
+                  CASE CONCAT(r.status, '')
+                    WHEN '1' THEN 'PENDING'
+                    WHEN '2' THEN 'ACTIVE'
+                    WHEN '3' THEN 'ENDED'
+                    WHEN '4' THEN 'CANCELLED'
+                    WHEN '5' THEN 'REJECTED'
+                    WHEN '6' THEN 'EXCEPTION'
+                    ELSE CONCAT(r.status, '')
+                  END AS status,
                   COALESCE(
                     GROUP_CONCAT(
                       CONCAT(d.name, ' x', rd.quantity)

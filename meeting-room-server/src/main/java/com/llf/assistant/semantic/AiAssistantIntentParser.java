@@ -19,6 +19,7 @@ public class AiAssistantIntentParser {
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("([\\u4e00-\\u9fa5A-Za-z0-9]+(?:会议室|厅))");
     private static final Pattern SINGLE_CLOCK_PATTERN = Pattern.compile("(?:改到|改成|调到)?\\s*(?:上午|下午|晚上|中午|傍晚)?\\s*(\\d{1,2})(?:(?::(\\d{1,2}))|点)");
     private static final Pattern DURATION_PATTERN = Pattern.compile("(\\d{2,3})分钟");
+    private static final Pattern RESERVATION_ID_PATTERN = Pattern.compile("(\\d{3,})");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AiAssistantActionRegistry actionRegistry;
@@ -66,6 +67,15 @@ public class AiAssistantIntentParser {
 
     private String resolveActionType(String originalText, String normalizedText) {
         String source = normalizedText == null ? "" : normalizedText;
+        if (containsAny(source, "待审核预约", "待审批预约", "待处理预约")) {
+            return "admin.reservations.pending";
+        }
+        if (containsAny(source, "通过预约", "批准预约", "同意预约", "审核通过")) {
+            return "admin.reservations.approve";
+        }
+        if (containsAny(source, "驳回预约", "拒绝预约", "审核驳回")) {
+            return "admin.reservations.reject";
+        }
         if (containsAny(source, "概览", "概况", "统计", "摘要")) {
             return "overview.summary.query";
         }
@@ -122,6 +132,10 @@ public class AiAssistantIntentParser {
         String actionType = result.getActionType();
         if (actionType.startsWith("reservations.") || "calendar.query".equals(actionType)) {
             fields.setTargetScope("mine");
+        }
+        if (actionType.startsWith("admin.reservations.")) {
+            fields.setTargetScope("all");
+            fields.setReservationId(parseReservationId(normalizedText));
         }
         Integer attendees = parseAttendees(normalizedText);
         if (attendees != null) {
@@ -326,6 +340,14 @@ public class AiAssistantIntentParser {
         }
         Matcher matcher = DURATION_PATTERN.matcher(text);
         return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
+    }
+
+    private Long parseReservationId(String text) {
+        if (text == null) {
+            return null;
+        }
+        Matcher matcher = RESERVATION_ID_PATTERN.matcher(text);
+        return matcher.find() ? Long.valueOf(matcher.group(1)) : null;
     }
 
     private String parseSingleClock(String text) {

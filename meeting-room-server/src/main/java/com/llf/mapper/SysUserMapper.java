@@ -37,7 +37,7 @@ public interface SysUserMapper {
               username,
               display_name AS displayName
             FROM sys_user
-            WHERE status = 'ACTIVE'
+            WHERE CONCAT(status, '') IN ('ACTIVE', '1')
               AND display_name LIKE CONCAT('%', #{keyword}, '%')
               AND (#{excludeUserId} IS NULL OR id <> #{excludeUserId})
             ORDER BY id ASC
@@ -54,7 +54,7 @@ public interface SysUserMapper {
               username,
               display_name AS displayName
             FROM sys_user
-            WHERE status = 'ACTIVE'
+            WHERE CONCAT(status, '') IN ('ACTIVE', '1')
               AND id IN
               <foreach collection="userIds" item="userId" open="(" separator="," close=")">
                 #{userId}

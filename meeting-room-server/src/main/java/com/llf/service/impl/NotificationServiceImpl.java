@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.llf.mapper.NotificationMapper;
 import com.llf.result.BizException;
 import com.llf.service.NotificationService;
+import com.llf.vo.notification.AdminNotificationPublishVO;
 import com.llf.vo.notification.NotificationItemVO;
 import com.llf.vo.notification.NotificationReadAllResultVO;
 import com.llf.vo.notification.NotificationReadResultVO;
@@ -23,6 +24,8 @@ import java.util.Map;
 public class NotificationServiceImpl implements NotificationService {
 
     private static final List<String> SUPPORTED_CATEGORIES = List.of("NOTICE", "MESSAGE", "TODO");
+    private static final List<String> SUPPORTED_ADMIN_NOTIFICATION_TYPES = List.of("ANNOUNCEMENT", "MAINTENANCE");
+    private static final List<String> SUPPORTED_RECIPIENT_SCOPES = List.of("ALL", "USERS", "ADMINS");
     private static final String DEFAULT_ROUTE = "/reservations/index";
     private static final int DEFAULT_PAGE_NUM = 1;
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -102,6 +105,39 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
+    public AdminNotificationPublishVO publishAdminNotification(String type, String title, String content, String recipientScope) {
+        String normalizedType = normalizeAdminNotificationType(type);
+        String normalizedScope = normalizeRecipientScope(recipientScope);
+        String normalizedTitle = normalizeText(title, "title", 128);
+        String normalizedContent = normalizeText(content, "content", 500);
+        String extra = "MAINTENANCE".equals(normalizedType) ? "维护通知" : "系统公告";
+        String status = "MAINTENANCE".equals(normalizedType) ? "warning" : "primary";
+        List<Long> recipientIds = notificationMapper.selectActiveNotificationRecipientIds(normalizedScope);
+
+        for (Long recipientId : recipientIds) {
+            insertNotification(
+                    recipientId,
+                    "NOTICE",
+                    normalizedTitle,
+                    normalizedContent,
+                    null,
+                    null,
+                    extra,
+                    status
+            );
+        }
+
+        AdminNotificationPublishVO vo = new AdminNotificationPublishVO();
+        vo.setType(normalizedType);
+        vo.setCategory("NOTICE");
+        vo.setRecipientScope(normalizedScope);
+        vo.setTitle(normalizedTitle);
+        vo.setPublishedCount(recipientIds.size());
+        return vo;
+    }
+
+    @Override
     public void createReservationCreatedNotification(Long userId, String reservationTitle, String roomName, String startTime, String endTime) {
         insertNotification(
                 userId,
@@ -144,6 +180,48 @@ public class NotificationServiceImpl implements NotificationService {
                 null,
                 null,
                 "warning"
+        );
+    }
+
+    @Override
+    public void createReservationApprovedNotification(Long userId, String reservationTitle, String roomName, String startTime, String endTime) {
+        insertNotification(
+                userId,
+                "NOTICE",
+                "预约审核通过",
+                wrapTitle(reservationTitle) + "已审核通过" + buildReservationTimeSuffix(roomName, startTime, endTime),
+                DEFAULT_ROUTE,
+                null,
+                null,
+                "success"
+        );
+    }
+
+    @Override
+    public void createReservationRejectedNotification(Long userId, String reservationTitle, String rejectReason) {
+        insertNotification(
+                userId,
+                "MESSAGE",
+                "预约已驳回",
+                wrapTitle(reservationTitle) + "已驳回，原因：" + rejectReason,
+                DEFAULT_ROUTE,
+                null,
+                null,
+                "warning"
+        );
+    }
+
+    @Override
+    public void createReservationExceptionNotification(Long userId, String reservationTitle, String exceptionReason) {
+        insertNotification(
+                userId,
+                "MESSAGE",
+                "预约已标记异常",
+                wrapTitle(reservationTitle) + "已被标记为异常，原因：" + exceptionReason,
+                DEFAULT_ROUTE,
+                null,
+                null,
+                "danger"
         );
     }
 
@@ -217,6 +295,39 @@ public class NotificationServiceImpl implements NotificationService {
         String normalized = category.trim().toUpperCase();
         if (!SUPPORTED_CATEGORIES.contains(normalized)) {
             throw new BizException(400, "category must be one of NOTICE, MESSAGE, TODO");
+        }
+        return normalized;
+    }
+
+    private String normalizeAdminNotificationType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new BizException(400, "type must be one of ANNOUNCEMENT, MAINTENANCE");
+        }
+        String normalized = type.trim().toUpperCase();
+        if (!SUPPORTED_ADMIN_NOTIFICATION_TYPES.contains(normalized)) {
+            throw new BizException(400, "type must be one of ANNOUNCEMENT, MAINTENANCE");
+        }
+        return normalized;
+    }
+
+    private String normalizeRecipientScope(String recipientScope) {
+        if (recipientScope == null || recipientScope.isBlank()) {
+            return "ALL";
+        }
+        String normalized = recipientScope.trim().toUpperCase();
+        if (!SUPPORTED_RECIPIENT_SCOPES.contains(normalized)) {
+            throw new BizException(400, "recipientScope must be one of ALL, USERS, ADMINS");
+        }
+        return normalized;
+    }
+
+    private String normalizeText(String value, String fieldName, int maxLength) {
+        if (value == null || value.isBlank()) {
+            throw new BizException(400, fieldName + " must not be blank");
+        }
+        String normalized = value.trim();
+        if (normalized.length() > maxLength) {
+            throw new BizException(400, fieldName + " length must not exceed " + maxLength);
         }
         return normalized;
     }

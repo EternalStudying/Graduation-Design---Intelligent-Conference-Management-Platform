@@ -25,6 +25,9 @@
         "reservations.update",
         "reservations.cancel",
         "reservations.review",
+        "admin.reservations.pending",
+        "admin.reservations.approve",
+        "admin.reservations.reject",
         "unknown"
       ]
     },

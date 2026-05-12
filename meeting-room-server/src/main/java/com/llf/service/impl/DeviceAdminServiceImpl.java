@@ -270,6 +270,12 @@ public class DeviceAdminServiceImpl implements DeviceAdminService {
             throw new BizException(400, "status must not be blank");
         }
         String value = status.trim();
+        if ("1".equals(value)) {
+            return "ENABLED";
+        }
+        if ("0".equals(value)) {
+            return "DISABLED";
+        }
         if (!DEVICE_STATUS.contains(value)) {
             throw new BizException(400, "status must be one of ENABLED, DISABLED");
         }

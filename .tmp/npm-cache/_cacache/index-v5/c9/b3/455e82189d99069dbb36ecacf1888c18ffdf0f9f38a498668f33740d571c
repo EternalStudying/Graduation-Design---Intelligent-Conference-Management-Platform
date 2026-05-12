@@ -1,0 +1,2 @@
+
+dabfe91cc0c1b02aacfd0a0fa09db4d0aadeaa65	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/isarray","integrity":null,"time":1776516172160,"size":"262","metadata":{"time":1776516172160,"url":"http://registry.npmmirror.com/isarray","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/isarray"},"options":{"compress":true},"status":301}}

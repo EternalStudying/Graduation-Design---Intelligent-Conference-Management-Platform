@@ -93,7 +93,7 @@ public class RoomAssistantActionHandler implements AiAssistantActionHandler {
 
         String capacityType = resolveCapacityType(attendees);
         String location = resolveLocation(message);
-        RoomPageDataVO page = roomService.pageRooms(1, 6, null, "AVAILABLE", capacityType, location);
+        RoomPageDataVO page = roomService.pageRooms(1, 6, null, "AVAILABLE", capacityType, location, null);
         List<RoomPageItemVO> rooms = page == null || page.getList() == null ? List.of() : page.getList();
         if (rooms.isEmpty()) {
             return AiAssistantActionPlan.reply("当前没有找到符合条件的会议室。", List.of("查看全部会议室", "帮我创建一个预约", "查看会议室详情"));
@@ -124,7 +124,7 @@ public class RoomAssistantActionHandler implements AiAssistantActionHandler {
             return roomDetailReply(roomService.userDetailById(roomId));
         }
 
-        RoomPageDataVO page = roomService.pageRooms(1, 20, null, null, null, null);
+        RoomPageDataVO page = roomService.pageRooms(1, 20, null, null, null, null, null);
         List<RoomPageItemVO> rooms = page == null || page.getList() == null ? List.of() : page.getList();
         List<RoomPageItemVO> matched = rooms.stream()
                 .filter(item -> matchesRoom(message, item))

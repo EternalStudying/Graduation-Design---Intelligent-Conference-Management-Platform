@@ -3,6 +3,7 @@ package com.llf.service.impl;
 import com.llf.assistant.AiAssistantActionRegistry;
 import com.llf.assistant.AiAssistantSessionStore;
 import com.llf.assistant.handler.CalendarAssistantActionHandler;
+import com.llf.assistant.handler.AdminReservationAssistantActionHandler;
 import com.llf.assistant.handler.OverviewAssistantActionHandler;
 import com.llf.assistant.handler.ReservationAssistantActionHandler;
 import com.llf.assistant.handler.RoomAssistantActionHandler;
@@ -21,6 +22,8 @@ import com.llf.service.ReservationService;
 import com.llf.service.RoomService;
 import com.llf.service.UserService;
 import com.llf.vo.assistant.AiAssistantTurnVO;
+import com.llf.vo.admin.reservation.AdminReservationItemVO;
+import com.llf.vo.admin.reservation.AdminReservationPageVO;
 import com.llf.vo.reservation.MyReservationVO;
 import com.llf.vo.reservation.ReservationCreateVO;
 import com.llf.vo.user.UserOptionVO;
@@ -32,6 +35,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +71,7 @@ class AiAssistantServiceImplTest {
     @BeforeEach
     void setUp() {
         AiAssistantActionRegistry registry = new AiAssistantActionRegistry(List.of(
+                new AdminReservationAssistantActionHandler(reservationService),
                 new ReservationAssistantActionHandler(reservationService, userService),
                 new RoomAssistantActionHandler(reservationService, roomService),
                 new OverviewAssistantActionHandler(dashboardService),
@@ -392,8 +399,79 @@ class AiAssistantServiceImplTest {
         ArgumentCaptor<String> startCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> endCaptor = ArgumentCaptor.forClass(String.class);
         verify(reservationService, times(1)).myReservations(eq(1L), startCaptor.capture(), endCaptor.capture(), eq("all"), eq(null), eq(false));
-        assertEquals("2026-04-18 00:00:00", startCaptor.getValue());
-        assertEquals("2026-04-20 00:00:00", endCaptor.getValue());
+        LocalDate saturday = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
+        assertEquals(saturday + " 00:00:00", startCaptor.getValue());
+        assertEquals(saturday.plusDays(2) + " 00:00:00", endCaptor.getValue());
+    }
+
+    @Test
+    void message_adminPendingReservations_shouldReturnPendingList() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(adminUser(2L));
+        when(reservationService.adminReservations(1, 10, null, "PENDING"))
+                .thenReturn(adminReservationPage(List.of(adminReservation(9001L, "项目周会"))));
+
+        AiAssistantTurnVO result = aiAssistantService.message(adminUser(2L), messageRequest(session.getSessionId(), "查看待审核预约"));
+
+        assertEquals("reply", result.getStage());
+        assertTrue(result.getAssistantText().contains("项目周会"));
+        verify(reservationService).adminReservations(1, 10, null, "PENDING");
+    }
+
+    @Test
+    void message_userPendingReservations_shouldRejectAdminAction() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(currentUser(1L));
+
+        AiAssistantTurnVO result = aiAssistantService.message(currentUser(1L), messageRequest(session.getSessionId(), "查看待审核预约"));
+
+        assertEquals("error", result.getStage());
+        assertTrue(result.getAssistantText().contains("管理员"));
+    }
+
+    @Test
+    void message_adminApproveReservation_shouldEnterConfirm() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(adminUser(2L));
+
+        AiAssistantTurnVO result = aiAssistantService.message(adminUser(2L), messageRequest(session.getSessionId(), "通过预约 9001"));
+
+        assertEquals("confirm", result.getStage());
+        assertNotNull(result.getPendingAction());
+        assertEquals("admin.reservations.approve", result.getPendingAction().getActionType());
+        assertTrue(result.getPendingAction().getConfirmRequired());
+    }
+
+    @Test
+    void confirm_adminApproveReservation_shouldCallAdminService() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(adminUser(2L));
+        AiAssistantTurnVO confirmTurn = aiAssistantService.message(adminUser(2L), messageRequest(session.getSessionId(), "通过预约 9001"));
+        when(reservationService.adminApproveReservation(9001L, 2L, null))
+                .thenReturn(adminReservation(9001L, "项目周会"));
+
+        AiAssistantTurnVO result = aiAssistantService.confirm(adminUser(2L), confirmTurn.getPendingAction().getExecutionId());
+
+        assertEquals("result", result.getStage());
+        assertEquals("success", result.getResult().getStatus());
+        assertEquals("/admin/reservations", result.getResult().getDeepLink());
+        verify(reservationService).adminApproveReservation(9001L, 2L, null);
+    }
+
+    @Test
+    void message_adminRejectReservationWithoutReason_shouldCollectReason() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(adminUser(2L));
+
+        AiAssistantTurnVO result = aiAssistantService.message(adminUser(2L), messageRequest(session.getSessionId(), "驳回预约 9001"));
+
+        assertEquals("collect", result.getStage());
+        assertTrue(result.getMissingFields().stream().anyMatch(field -> "reason".equals(field.getKey()) && "textarea".equals(field.getInputType())));
+    }
+
+    @Test
+    void message_adminRejectReservationWithReason_shouldEnterConfirm() {
+        AiAssistantTurnVO session = aiAssistantService.createSession(adminUser(2L));
+
+        AiAssistantTurnVO result = aiAssistantService.message(adminUser(2L), messageRequest(session.getSessionId(), "驳回预约 9001，原因时间冲突"));
+
+        assertEquals("confirm", result.getStage());
+        assertEquals("admin.reservations.reject", result.getPendingAction().getActionType());
     }
 
     private AiAssistantMessageRequestDTO messageRequest(String sessionId, String message) {
@@ -409,6 +487,12 @@ class AiAssistantServiceImplTest {
         user.setUsername("user-" + id);
         user.setDisplayName("用户" + id);
         user.setRole("USER");
+        return user;
+    }
+
+    private AuthUser adminUser(Long id) {
+        AuthUser user = currentUser(id);
+        user.setRole("ADMIN");
         return user;
     }
 
@@ -436,6 +520,25 @@ class AiAssistantServiceImplTest {
         vo.setUsername(username);
         vo.setNickname(displayName);
         vo.setDisplayName(displayName + " (" + username + ")");
+        return vo;
+    }
+
+    private AdminReservationPageVO adminReservationPage(List<AdminReservationItemVO> reservations) {
+        AdminReservationPageVO page = new AdminReservationPageVO();
+        page.setList(reservations);
+        page.setTotal((long) reservations.size());
+        return page;
+    }
+
+    private AdminReservationItemVO adminReservation(Long id, String title) {
+        AdminReservationItemVO vo = new AdminReservationItemVO();
+        vo.setId(id);
+        vo.setTitle(title);
+        vo.setRoomName("云杉会议室");
+        vo.setOrganizerName("张三");
+        vo.setStartTime("2026-05-13 14:00:00");
+        vo.setEndTime("2026-05-13 15:00:00");
+        vo.setStatus("PENDING");
         return vo;
     }
 }

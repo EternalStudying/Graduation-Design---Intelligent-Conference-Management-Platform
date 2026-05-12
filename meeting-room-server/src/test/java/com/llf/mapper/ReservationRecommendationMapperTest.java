@@ -70,7 +70,7 @@ class ReservationRecommendationMapperTest {
                 """,
                 """
                 CREATE TABLE reservation (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     reservation_no VARCHAR(40) NOT NULL,
                     room_id BIGINT NOT NULL,
                     organizer_id BIGINT NOT NULL,
@@ -80,7 +80,14 @@ class ReservationRecommendationMapperTest {
                     start_time TIMESTAMP NOT NULL,
                     end_time TIMESTAMP NOT NULL,
                     status VARCHAR(32) NOT NULL,
-                    cancel_reason VARCHAR(255)
+                    cancel_reason VARCHAR(255),
+                    approval_remark VARCHAR(255),
+                    reject_reason VARCHAR(255),
+                    exception_reason VARCHAR(255),
+                    processed_by BIGINT,
+                    processed_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """,
                 """
@@ -132,6 +139,7 @@ class ReservationRecommendationMapperTest {
     @Test
     void selectConflictRoomIds_shouldOnlyReturnActiveOverlaps() {
         insertReservation(1L, 1L, "ACTIVE", "2026-04-15T09:00:00", "2026-04-15T10:00:00");
+        insertReservation(5L, 1L, "PENDING", "2026-04-15T09:00:00", "2026-04-15T10:00:00");
         insertReservation(2L, 2L, "CANCELLED", "2026-04-15T09:00:00", "2026-04-15T10:00:00");
         insertReservation(3L, 3L, "ENDED", "2026-04-15T09:00:00", "2026-04-15T10:00:00");
         insertReservation(4L, 4L, "ACTIVE", "2026-04-15T10:30:00", "2026-04-15T11:30:00");
@@ -143,6 +151,24 @@ class ReservationRecommendationMapperTest {
         );
 
         assertEquals(List.of(1L), roomIds);
+    }
+
+    @Test
+    void insertReservation_shouldCreatePendingReservation() {
+        reservationMapper.insertReservation(
+                "RSV-PENDING",
+                1L,
+                1L,
+                "待审核会议",
+                null,
+                4,
+                Timestamp.valueOf(LocalDateTime.parse("2026-04-20T09:00:00")),
+                Timestamp.valueOf(LocalDateTime.parse("2026-04-20T10:00:00"))
+        );
+
+        String status = jdbcTemplate.queryForObject("SELECT CONCAT(status, '') FROM reservation WHERE id = 1", String.class);
+
+        assertEquals("1", status);
     }
 
     @Test

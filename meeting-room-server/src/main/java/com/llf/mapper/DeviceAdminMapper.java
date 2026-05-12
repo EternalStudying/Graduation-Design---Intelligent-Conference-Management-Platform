@@ -14,7 +14,11 @@ public interface DeviceAdminMapper {
               room_code AS roomCode,
               name AS roomName,
               location,
-              status AS roomStatus
+              CASE CONCAT(status, '')
+                WHEN '1' THEN 'AVAILABLE'
+                WHEN '2' THEN 'MAINTENANCE'
+                ELSE CONCAT(status, '')
+              END AS roomStatus
             FROM meeting_room
             ORDER BY room_code ASC, id ASC
             """)
@@ -26,7 +30,11 @@ public interface DeviceAdminMapper {
               device_code AS deviceCode,
               name,
               total,
-              status
+              CASE CONCAT(status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(status, '')
+              END AS status
             FROM device
             ORDER BY device_code ASC, id ASC
             """)
@@ -39,11 +47,19 @@ public interface DeviceAdminMapper {
               m.room_code AS roomCode,
               m.name AS roomName,
               m.location AS location,
-              m.status AS roomStatus,
+              CASE CONCAT(m.status, '')
+                WHEN '1' THEN 'AVAILABLE'
+                WHEN '2' THEN 'MAINTENANCE'
+                ELSE CONCAT(m.status, '')
+              END AS roomStatus,
               d.device_code AS deviceCode,
               d.name AS deviceName,
               d.total AS deviceTotal,
-              d.status AS deviceStatus
+              CASE CONCAT(d.status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(d.status, '')
+              END AS deviceStatus
             FROM room_device rd
             JOIN meeting_room m ON m.id = rd.room_id
             JOIN device d ON d.id = rd.device_id
@@ -63,7 +79,14 @@ public interface DeviceAdminMapper {
                 )
               </if>
               <if test="status != null and status != ''">
-                AND d.status = #{status}
+                AND (
+                  CONCAT(d.status, '') = #{status}
+                  OR CONCAT(d.status, '') = CASE #{status}
+                    WHEN 'ENABLED' THEN '1'
+                    WHEN 'DISABLED' THEN '0'
+                    ELSE #{status}
+                  END
+                )
               </if>
             </script>
             """)
@@ -77,7 +100,11 @@ public interface DeviceAdminMapper {
               d.device_code AS deviceCode,
               d.name,
               d.total,
-              d.status,
+              CASE CONCAT(d.status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(d.status, '')
+              END AS status,
               COALESCE(rb.boundRoomCount, 0) AS boundRoomCount,
               COALESCE(rb.boundQuantity, 0) AS boundQuantity,
               GREATEST(d.total - COALESCE(rb.boundQuantity, 0), 0) AS availableQuantity
@@ -98,7 +125,14 @@ public interface DeviceAdminMapper {
                 )
               </if>
               <if test="status != null and status != ''">
-                AND d.status = #{status}
+                AND (
+                  CONCAT(d.status, '') = #{status}
+                  OR CONCAT(d.status, '') = CASE #{status}
+                    WHEN 'ENABLED' THEN '1'
+                    WHEN 'DISABLED' THEN '0'
+                    ELSE #{status}
+                  END
+                )
               </if>
             ORDER BY d.device_code ASC, d.id ASC
             LIMIT #{limit} OFFSET #{offset}
@@ -115,7 +149,11 @@ public interface DeviceAdminMapper {
               d.device_code AS deviceCode,
               d.name,
               d.total,
-              d.status,
+              CASE CONCAT(d.status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(d.status, '')
+              END AS status,
               COALESCE(rb.boundRoomCount, 0) AS boundRoomCount,
               COALESCE(rb.boundQuantity, 0) AS boundQuantity,
               GREATEST(d.total - COALESCE(rb.boundQuantity, 0), 0) AS availableQuantity
@@ -156,10 +194,10 @@ public interface DeviceAdminMapper {
     @Select("SELECT COUNT(*) FROM device")
     Integer countAll();
 
-    @Select("SELECT COUNT(*) FROM device WHERE status = 'ENABLED'")
+    @Select("SELECT COUNT(*) FROM device WHERE CONCAT(status, '') IN ('ENABLED', '1')")
     Integer countEnabled();
 
-    @Select("SELECT COUNT(*) FROM device WHERE status = 'DISABLED'")
+    @Select("SELECT COUNT(*) FROM device WHERE CONCAT(status, '') IN ('DISABLED', '0')")
     Integer countDisabled();
 
     @Select("""
@@ -188,7 +226,17 @@ public interface DeviceAdminMapper {
 
     @Insert("""
             INSERT INTO device(device_code, name, total, status, created_at)
-            VALUES(#{deviceCode}, #{name}, #{total}, #{status}, NOW())
+            VALUES(
+              #{deviceCode},
+              #{name},
+              #{total},
+              CASE #{status}
+                WHEN 'ENABLED' THEN 1
+                WHEN 'DISABLED' THEN 0
+                ELSE #{status}
+              END,
+              NOW()
+            )
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insertAdminDevice(AdminDeviceCreateRow row);
@@ -198,14 +246,22 @@ public interface DeviceAdminMapper {
             SET device_code = #{deviceCode},
                 name = #{name},
                 total = #{total},
-                status = #{status}
+                status = CASE #{status}
+                    WHEN 'ENABLED' THEN 1
+                    WHEN 'DISABLED' THEN 0
+                    ELSE #{status}
+                END
             WHERE id = #{id}
             """)
     int updateById(AdminDeviceUpdateRow row);
 
     @Update("""
             UPDATE device
-            SET status = #{status}
+            SET status = CASE #{status}
+                    WHEN 'ENABLED' THEN 1
+                    WHEN 'DISABLED' THEN 0
+                    ELSE #{status}
+                END
             WHERE id = #{id}
             """)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);

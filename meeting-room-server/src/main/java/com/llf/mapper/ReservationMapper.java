@@ -3,6 +3,7 @@ package com.llf.mapper;
 import com.llf.vo.reservation.CalendarEventVO;
 import com.llf.vo.dashboard.DashboardReservationSlotVO;
 import com.llf.vo.dashboard.DashboardTodayScheduleVO;
+import com.llf.vo.admin.reservation.AdminReservationItemVO;
 import com.llf.vo.reservation.MyReservationVO;
 import com.llf.vo.reservation.ReservationCreateVO;
 import lombok.Data;
@@ -18,7 +19,7 @@ public interface ReservationMapper {
             SELECT COUNT(*)
             FROM reservation
             WHERE organizer_id = #{organizerId}
-              AND status = 'ACTIVE'
+              AND CONCAT(status, '') IN ('PENDING', '1')
               AND end_time >= #{now}
             """)
     Integer countPendingByOrganizerId(@Param("organizerId") Long organizerId,
@@ -34,10 +35,18 @@ public interface ReservationMapper {
               r.start_time AS startTime,
               r.end_time AS endTime,
               r.attendees,
-              r.status
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status
             FROM reservation r
             JOIN meeting_room m ON m.id = r.room_id
-            WHERE r.status <> 'CANCELLED'
+            WHERE CONCAT(r.status, '') IN ('ACTIVE', '2')
               AND r.start_time < #{end}
               AND r.end_time > #{start}
             ORDER BY r.start_time ASC, r.id ASC
@@ -54,7 +63,15 @@ public interface ReservationMapper {
               r.room_id AS roomId,
               m.name AS roomName,
               r.attendees,
-              r.status,
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status,
               COALESCE(
                 GROUP_CONCAT(
                   DISTINCT CASE
@@ -70,7 +87,7 @@ public interface ReservationMapper {
             LEFT JOIN reservation_device rd ON rd.reservation_id = r.id
             LEFT JOIN device d ON d.id = rd.device_id
             WHERE r.organizer_id = #{organizerId}
-              AND r.status <> 'CANCELLED'
+              AND CONCAT(r.status, '') NOT IN ('CANCELLED', '4')
               AND r.start_time < #{end}
               AND r.end_time > #{start}
             GROUP BY r.id, r.start_time, r.end_time, r.title, r.room_id, m.name, r.attendees, r.status
@@ -93,7 +110,15 @@ public interface ReservationMapper {
               r.attendees,
               DATE_FORMAT(r.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
               DATE_FORMAT(r.end_time, '%Y-%m-%d %H:%i:%s') AS endTime,
-              r.status,
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status,
               r.cancel_reason AS cancelReason
             FROM reservation r
             JOIN meeting_room m ON m.id = r.room_id
@@ -104,7 +129,18 @@ public interface ReservationMapper {
                 AND r.room_id = #{roomId}
               </if>
               <if test="status != null and status != ''">
-                AND r.status = #{status}
+                AND (
+                  CONCAT(r.status, '') = #{status}
+                  OR CONCAT(r.status, '') = CASE #{status}
+                    WHEN 'PENDING' THEN '1'
+                    WHEN 'ACTIVE' THEN '2'
+                    WHEN 'ENDED' THEN '3'
+                    WHEN 'CANCELLED' THEN '4'
+                    WHEN 'REJECTED' THEN '5'
+                    WHEN 'EXCEPTION' THEN '6'
+                    ELSE #{status}
+                  END
+                )
               </if>
             ORDER BY r.start_time ASC, r.id ASC
             </script>
@@ -123,7 +159,11 @@ public interface ReservationMapper {
               d.device_code AS deviceCode,
               d.name AS name,
               rd.quantity AS quantity,
-              d.status AS status
+              CASE CONCAT(d.status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(d.status, '')
+              END AS status
             FROM reservation_device rd
             JOIN device d ON d.id = rd.device_id
             WHERE rd.reservation_id IN
@@ -142,7 +182,11 @@ public interface ReservationMapper {
               name,
               location,
               capacity,
-              status,
+              CASE CONCAT(status, '')
+                WHEN '1' THEN 'AVAILABLE'
+                WHEN '2' THEN 'MAINTENANCE'
+                ELSE CONCAT(status, '')
+              END AS status,
               description
             FROM meeting_room
             WHERE id = #{roomId}
@@ -174,7 +218,7 @@ public interface ReservationMapper {
               #{attendees},
               #{startTime},
               #{endTime},
-              'ACTIVE',
+              1,
               NOW(),
               NOW()
             )
@@ -224,7 +268,7 @@ public interface ReservationMapper {
             SELECT COUNT(1)
             FROM reservation r
             WHERE r.room_id = #{roomId}
-              AND r.status = 'ACTIVE'
+              AND CONCAT(r.status, '') IN ('ACTIVE', '2')
               AND r.start_time < #{end}
               AND r.end_time > #{start}
             """)
@@ -236,7 +280,7 @@ public interface ReservationMapper {
             <script>
             SELECT DISTINCT room_id
             FROM reservation
-            WHERE status = 'ACTIVE'
+            WHERE CONCAT(status, '') IN ('ACTIVE', '2')
               AND start_time &lt; #{end}
               AND end_time &gt; #{start}
               AND room_id IN
@@ -259,7 +303,15 @@ public interface ReservationMapper {
                 attendees,
                 DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
                 DATE_FORMAT(end_time, '%Y-%m-%d %H:%i:%s') AS endTime,
-                status,
+                CASE CONCAT(status, '')
+                    WHEN '1' THEN 'PENDING'
+                    WHEN '2' THEN 'ACTIVE'
+                    WHEN '3' THEN 'ENDED'
+                    WHEN '4' THEN 'CANCELLED'
+                    WHEN '5' THEN 'REJECTED'
+                    WHEN '6' THEN 'EXCEPTION'
+                    ELSE CONCAT(status, '')
+                END AS status,
                 remark
             FROM reservation
             WHERE id = #{id}
@@ -282,9 +334,17 @@ public interface ReservationMapper {
                     u.display_name AS organizerName,
                     r.title,
                     r.attendees,
-                    CAST(r.start_time AS CHAR) AS startTime,
-                    CAST(r.end_time AS CHAR) AS endTime,
-                    r.status,
+                    CONCAT(r.start_time, '') AS startTime,
+                    CONCAT(r.end_time, '') AS endTime,
+                    CASE CONCAT(r.status, '')
+                        WHEN '1' THEN 'PENDING'
+                        WHEN '2' THEN 'ACTIVE'
+                        WHEN '3' THEN 'ENDED'
+                        WHEN '4' THEN 'CANCELLED'
+                        WHEN '5' THEN 'REJECTED'
+                        WHEN '6' THEN 'EXCEPTION'
+                        ELSE CONCAT(r.status, '')
+                    END AS status,
                     r.remark,
                     r.cancel_reason AS cancelReason,
                     CASE
@@ -293,13 +353,13 @@ public interface ReservationMapper {
                     END AS role,
                     CASE
                         WHEN r.organizer_id = #{currentUserId}
-                             AND r.status = 'ACTIVE'
+                             AND CONCAT(r.status, '') IN ('ACTIVE', '2')
                              AND r.end_time &gt; NOW()
                         THEN TRUE ELSE FALSE
                     END AS canEdit,
                     CASE
                         WHEN r.organizer_id = #{currentUserId}
-                             AND r.status = 'ACTIVE'
+                             AND CONCAT(r.status, '') IN ('ACTIVE', '2')
                              AND r.end_time &gt; NOW()
                         THEN TRUE ELSE FALSE
                     END AS canCancel
@@ -309,7 +369,18 @@ public interface ReservationMapper {
                 WHERE r.start_time &gt;= #{start}
                   AND r.start_time &lt; #{end}
                   <if test="status != null and status != ''">
-                    AND r.status = #{status}
+                    AND (
+                      CONCAT(r.status, '') = #{status}
+                      OR CONCAT(r.status, '') = CASE #{status}
+                        WHEN 'PENDING' THEN '1'
+                        WHEN 'ACTIVE' THEN '2'
+                        WHEN 'ENDED' THEN '3'
+                        WHEN 'CANCELLED' THEN '4'
+                        WHEN 'REJECTED' THEN '5'
+                        WHEN 'EXCEPTION' THEN '6'
+                        ELSE #{status}
+                      END
+                    )
                   </if>
                   <choose>
                     <when test="scope == 'organizer'">
@@ -349,7 +420,7 @@ public interface ReservationMapper {
             <script>
                 SELECT COUNT(1)
                 FROM reservation r
-                WHERE r.status = 'ENDED'
+                WHERE CONCAT(r.status, '') IN ('ENDED', '3')
                   <choose>
                     <when test="scope == 'organizer'">
                       AND r.organizer_id = #{currentUserId}
@@ -395,9 +466,17 @@ public interface ReservationMapper {
                     u.display_name AS organizerName,
                     r.title,
                     r.attendees,
-                    CAST(r.start_time AS CHAR) AS startTime,
-                    CAST(r.end_time AS CHAR) AS endTime,
-                    r.status,
+                    CONCAT(r.start_time, '') AS startTime,
+                    CONCAT(r.end_time, '') AS endTime,
+                    CASE CONCAT(r.status, '')
+                        WHEN '1' THEN 'PENDING'
+                        WHEN '2' THEN 'ACTIVE'
+                        WHEN '3' THEN 'ENDED'
+                        WHEN '4' THEN 'CANCELLED'
+                        WHEN '5' THEN 'REJECTED'
+                        WHEN '6' THEN 'EXCEPTION'
+                        ELSE CONCAT(r.status, '')
+                    END AS status,
                     r.remark,
                     r.cancel_reason AS cancelReason,
                     CASE
@@ -409,7 +488,7 @@ public interface ReservationMapper {
                 FROM reservation r
                 JOIN meeting_room m ON m.id = r.room_id
                 JOIN sys_user u ON u.id = r.organizer_id
-                WHERE r.status = 'ENDED'
+                WHERE CONCAT(r.status, '') IN ('ENDED', '3')
                   <choose>
                     <when test="scope == 'organizer'">
                       AND r.organizer_id = #{currentUserId}
@@ -473,7 +552,11 @@ public interface ReservationMapper {
               d.device_code AS deviceCode,
               d.name,
               rd.quantity,
-              d.status
+              CASE CONCAT(d.status, '')
+                WHEN '1' THEN 'ENABLED'
+                WHEN '0' THEN 'DISABLED'
+                ELSE CONCAT(d.status, '')
+              END AS status
             FROM reservation_device rd
             JOIN device d ON d.id = rd.device_id
             WHERE rd.reservation_id IN
@@ -509,7 +592,15 @@ public interface ReservationMapper {
                 id,
                 organizer_id AS organizerId,
                 room_id AS roomId,
-                status,
+                CASE CONCAT(status, '')
+                    WHEN '1' THEN 'PENDING'
+                    WHEN '2' THEN 'ACTIVE'
+                    WHEN '3' THEN 'ENDED'
+                    WHEN '4' THEN 'CANCELLED'
+                    WHEN '5' THEN 'REJECTED'
+                    WHEN '6' THEN 'EXCEPTION'
+                    ELSE CONCAT(status, '')
+                END AS status,
                 end_time AS endTime
             FROM reservation
             WHERE id = #{id}
@@ -522,7 +613,15 @@ public interface ReservationMapper {
     @Select("""
             SELECT
               r.id,
-              r.status
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status
             FROM reservation r
             WHERE r.id = #{id}
               AND (
@@ -582,7 +681,7 @@ public interface ReservationMapper {
             FROM reservation
             WHERE room_id = #{roomId}
               AND id <> #{reservationId}
-              AND status = 'ACTIVE'
+              AND CONCAT(status, '') IN ('ACTIVE', '2')
               AND start_time < #{end}
               AND end_time > #{start}
             """)
@@ -611,7 +710,7 @@ public interface ReservationMapper {
 
     @Update("""
             UPDATE reservation
-            SET status = 'CANCELLED',
+            SET status = 4,
                 cancel_reason = #{cancelReason}
             WHERE id = #{id}
             """)
@@ -632,18 +731,26 @@ public interface ReservationMapper {
                 u.display_name AS organizerName,
                 r.title,
                 r.attendees,
-                CAST(r.start_time AS CHAR) AS startTime,
-                CAST(r.end_time AS CHAR) AS endTime,
-                r.status,
+                CONCAT(r.start_time, '') AS startTime,
+                CONCAT(r.end_time, '') AS endTime,
+                CASE CONCAT(r.status, '')
+                    WHEN '1' THEN 'PENDING'
+                    WHEN '2' THEN 'ACTIVE'
+                    WHEN '3' THEN 'ENDED'
+                    WHEN '4' THEN 'CANCELLED'
+                    WHEN '5' THEN 'REJECTED'
+                    WHEN '6' THEN 'EXCEPTION'
+                    ELSE CONCAT(r.status, '')
+                END AS status,
                 r.remark,
                 r.cancel_reason AS cancelReason,
                 'ORGANIZER' AS role,
                 CASE
-                    WHEN r.status = 'ACTIVE' AND r.end_time > NOW()
+                    WHEN CONCAT(r.status, '') IN ('ACTIVE', '2') AND r.end_time > NOW()
                     THEN TRUE ELSE FALSE
                 END AS canEdit,
                 CASE
-                    WHEN r.status = 'ACTIVE' AND r.end_time > NOW()
+                    WHEN CONCAT(r.status, '') IN ('ACTIVE', '2') AND r.end_time > NOW()
                     THEN TRUE ELSE FALSE
                 END AS canCancel
             FROM reservation r
@@ -662,7 +769,7 @@ public interface ReservationMapper {
               r.organizer_id AS userId,
               r.title
             FROM reservation r
-            WHERE r.status = 'ACTIVE'
+            WHERE CONCAT(r.status, '') IN ('ACTIVE', '2')
               AND r.end_time < #{now}
             UNION
             SELECT
@@ -671,18 +778,255 @@ public interface ReservationMapper {
               r.title
             FROM reservation r
             JOIN reservation_participant rp ON rp.reservation_id = r.id
-            WHERE r.status = 'ACTIVE'
+            WHERE CONCAT(r.status, '') IN ('ACTIVE', '2')
               AND r.end_time < #{now}
             """)
     List<ReviewTodoTargetRow> selectReviewTodoTargets(@Param("now") Timestamp now);
 
     @Update("""
                 UPDATE reservation
-                SET status = 'ENDED'
-                WHERE status = 'ACTIVE'
+                SET status = 3
+                WHERE CONCAT(status, '') IN ('ACTIVE', '2')
                   AND end_time < #{now}
             """)
     int markEnded(@Param("now") Timestamp now);
+
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+            FROM reservation r
+            JOIN meeting_room m ON m.id = r.room_id
+            JOIN sys_user u ON u.id = r.organizer_id
+            WHERE 1 = 1
+              <if test="keyword != null and keyword != ''">
+                AND (
+                  r.reservation_no LIKE CONCAT('%', #{keyword}, '%')
+                  OR r.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR m.name LIKE CONCAT('%', #{keyword}, '%')
+                  OR u.display_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+              </if>
+              <if test="status != null and status != ''">
+                AND (
+                  CONCAT(r.status, '') = #{status}
+                  OR CONCAT(r.status, '') = CASE #{status}
+                    WHEN 'PENDING' THEN '1'
+                    WHEN 'ACTIVE' THEN '2'
+                    WHEN 'ENDED' THEN '3'
+                    WHEN 'CANCELLED' THEN '4'
+                    WHEN 'REJECTED' THEN '5'
+                    WHEN 'EXCEPTION' THEN '6'
+                    ELSE #{status}
+                  END
+                )
+              </if>
+            </script>
+            """)
+    Long countAdminReservations(@Param("keyword") String keyword,
+                                @Param("status") String status);
+
+    @Select("""
+            <script>
+            SELECT
+              r.id,
+              r.reservation_no AS reservationNo,
+              r.room_id AS roomId,
+              m.room_code AS roomCode,
+              m.name AS roomName,
+              m.location AS roomLocation,
+              m.capacity AS roomCapacity,
+              r.organizer_id AS organizerId,
+              u.display_name AS organizerName,
+              r.title,
+              r.attendees,
+              DATE_FORMAT(r.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
+              DATE_FORMAT(r.end_time, '%Y-%m-%d %H:%i:%s') AS endTime,
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status,
+              r.remark,
+              r.cancel_reason AS cancelReason,
+              r.approval_remark AS approvalRemark,
+              r.reject_reason AS rejectReason,
+              r.exception_reason AS exceptionReason,
+              pu.display_name AS processedByName,
+              DATE_FORMAT(r.processed_at, '%Y-%m-%d %H:%i:%s') AS processedAt,
+              DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+            FROM reservation r
+            JOIN meeting_room m ON m.id = r.room_id
+            JOIN sys_user u ON u.id = r.organizer_id
+            LEFT JOIN sys_user pu ON pu.id = r.processed_by
+            WHERE 1 = 1
+              <if test="keyword != null and keyword != ''">
+                AND (
+                  r.reservation_no LIKE CONCAT('%', #{keyword}, '%')
+                  OR r.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR m.name LIKE CONCAT('%', #{keyword}, '%')
+                  OR u.display_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+              </if>
+              <if test="status != null and status != ''">
+                AND (
+                  CONCAT(r.status, '') = #{status}
+                  OR CONCAT(r.status, '') = CASE #{status}
+                    WHEN 'PENDING' THEN '1'
+                    WHEN 'ACTIVE' THEN '2'
+                    WHEN 'ENDED' THEN '3'
+                    WHEN 'CANCELLED' THEN '4'
+                    WHEN 'REJECTED' THEN '5'
+                    WHEN 'EXCEPTION' THEN '6'
+                    ELSE #{status}
+                  END
+                )
+              </if>
+            ORDER BY r.created_at DESC, r.id DESC
+            LIMIT #{limit} OFFSET #{offset}
+            </script>
+            """)
+    List<AdminReservationItemVO> selectAdminReservations(@Param("keyword") String keyword,
+                                                         @Param("status") String status,
+                                                         @Param("limit") int limit,
+                                                         @Param("offset") int offset);
+
+    @Select("""
+            SELECT
+              r.id,
+              r.reservation_no AS reservationNo,
+              r.room_id AS roomId,
+              m.room_code AS roomCode,
+              m.name AS roomName,
+              m.location AS roomLocation,
+              m.capacity AS roomCapacity,
+              r.organizer_id AS organizerId,
+              u.display_name AS organizerName,
+              r.title,
+              r.attendees,
+              DATE_FORMAT(r.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
+              DATE_FORMAT(r.end_time, '%Y-%m-%d %H:%i:%s') AS endTime,
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status,
+              r.remark,
+              r.cancel_reason AS cancelReason,
+              r.approval_remark AS approvalRemark,
+              r.reject_reason AS rejectReason,
+              r.exception_reason AS exceptionReason,
+              pu.display_name AS processedByName,
+              DATE_FORMAT(r.processed_at, '%Y-%m-%d %H:%i:%s') AS processedAt,
+              DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+            FROM reservation r
+            JOIN meeting_room m ON m.id = r.room_id
+            JOIN sys_user u ON u.id = r.organizer_id
+            LEFT JOIN sys_user pu ON pu.id = r.processed_by
+            WHERE r.id = #{id}
+            LIMIT 1
+            """)
+    AdminReservationItemVO selectAdminReservationById(@Param("id") Long id);
+
+    @Select("""
+            <script>
+            SELECT COUNT(1)
+            FROM reservation r
+            WHERE 1 = 1
+              <if test="status != null and status != ''">
+                AND (
+                  CONCAT(r.status, '') = #{status}
+                  OR CONCAT(r.status, '') = CASE #{status}
+                    WHEN 'PENDING' THEN '1'
+                    WHEN 'ACTIVE' THEN '2'
+                    WHEN 'ENDED' THEN '3'
+                    WHEN 'CANCELLED' THEN '4'
+                    WHEN 'REJECTED' THEN '5'
+                    WHEN 'EXCEPTION' THEN '6'
+                    ELSE #{status}
+                  END
+                )
+              </if>
+            </script>
+            """)
+    Integer countAdminReservationsByStatus(@Param("status") String status);
+
+    @Select("""
+            SELECT
+              r.id,
+              r.room_id AS roomId,
+              r.organizer_id AS organizerId,
+              r.title,
+              m.name AS roomName,
+              r.attendees,
+              CASE CONCAT(r.status, '')
+                WHEN '1' THEN 'PENDING'
+                WHEN '2' THEN 'ACTIVE'
+                WHEN '3' THEN 'ENDED'
+                WHEN '4' THEN 'CANCELLED'
+                WHEN '5' THEN 'REJECTED'
+                WHEN '6' THEN 'EXCEPTION'
+                ELSE CONCAT(r.status, '')
+              END AS status,
+              r.start_time AS startTime,
+              r.end_time AS endTime
+            FROM reservation r
+            JOIN meeting_room m ON m.id = r.room_id
+            WHERE r.id = #{id}
+            LIMIT 1
+            """)
+    AdminReservationProcessRow selectAdminReservationProcessById(@Param("id") Long id);
+
+    @Update("""
+            UPDATE reservation
+            SET status = 2,
+                approval_remark = #{approvalRemark},
+                reject_reason = NULL,
+                exception_reason = NULL,
+                processed_by = #{adminUserId},
+                processed_at = NOW(),
+                updated_at = NOW()
+            WHERE id = #{id}
+              AND CONCAT(status, '') IN ('PENDING', '1')
+            """)
+    int approveReservation(@Param("id") Long id,
+                           @Param("adminUserId") Long adminUserId,
+                           @Param("approvalRemark") String approvalRemark);
+
+    @Update("""
+            UPDATE reservation
+            SET status = 5,
+                reject_reason = #{rejectReason},
+                processed_by = #{adminUserId},
+                processed_at = NOW(),
+                updated_at = NOW()
+            WHERE id = #{id}
+              AND CONCAT(status, '') IN ('PENDING', '1')
+            """)
+    int rejectReservation(@Param("id") Long id,
+                          @Param("adminUserId") Long adminUserId,
+                          @Param("rejectReason") String rejectReason);
+
+    @Update("""
+            UPDATE reservation
+            SET status = 6,
+                exception_reason = #{exceptionReason},
+                processed_by = #{adminUserId},
+                processed_at = NOW(),
+                updated_at = NOW()
+            WHERE id = #{id}
+              AND CONCAT(status, '') IN ('ACTIVE', '2')
+            """)
+    int markReservationException(@Param("id") Long id,
+                                 @Param("adminUserId") Long adminUserId,
+                                 @Param("exceptionReason") String exceptionReason);
 
     @Data
     class ReservationEditableRow {
@@ -690,6 +1034,19 @@ public interface ReservationMapper {
         private Long organizerId;
         private Long roomId;
         private String status;
+        private Timestamp endTime;
+    }
+
+    @Data
+    class AdminReservationProcessRow {
+        private Long id;
+        private Long roomId;
+        private Long organizerId;
+        private String title;
+        private String roomName;
+        private Integer attendees;
+        private String status;
+        private Timestamp startTime;
         private Timestamp endTime;
     }
 

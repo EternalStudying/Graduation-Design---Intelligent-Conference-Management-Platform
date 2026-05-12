@@ -3,6 +3,7 @@ package com.llf.controller;
 import com.llf.mapper.RoomMapper;
 import com.llf.result.R;
 import com.llf.service.RoomService;
+import com.llf.vo.room.RoomDeviceOptionVO;
 import com.llf.vo.room.RoomPageDataVO;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.Min;
@@ -29,12 +30,18 @@ public class RoomController {
                                   @RequestParam(required = false) String keyword,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) String capacityType,
-                                  @RequestParam(required = false) String location) {
-        return R.ok(roomService.pageRooms(currentPage, size, keyword, status, capacityType, location));
+                                  @RequestParam(required = false) String location,
+                                  @RequestParam(required = false) String deviceIds) {
+        return R.ok(roomService.pageRooms(currentPage, size, keyword, status, capacityType, location, deviceIds));
     }
 
     @GetMapping("/locations")
     public R<java.util.List<String>> locations() {
         return R.ok(roomMapper.selectLocations());
+    }
+
+    @GetMapping("/device-options")
+    public R<java.util.List<RoomDeviceOptionVO>> deviceOptions() {
+        return R.ok(roomMapper.selectRoomDeviceOptions());
     }
 }

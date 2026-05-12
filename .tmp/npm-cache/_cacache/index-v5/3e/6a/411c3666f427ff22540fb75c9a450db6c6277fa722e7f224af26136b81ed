@@ -1,0 +1,2 @@
+
+ac598681ad73c4e56e385db96f7219bb1c203d54	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/process-nextick-args","integrity":null,"time":1776516172160,"size":"262","metadata":{"time":1776516172160,"url":"http://registry.npmmirror.com/process-nextick-args","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/process-nextick-args"},"options":{"compress":true},"status":301}}

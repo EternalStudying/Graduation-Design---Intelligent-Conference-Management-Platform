@@ -19,6 +19,7 @@ import com.llf.vo.reservation.ReservationRecommendationItemVO;
 import com.llf.vo.reservation.ReservationRecommendationVO;
 import com.llf.vo.reservation.MyReservationVO;
 import com.llf.vo.notification.NotificationTodoTargetVO;
+import com.llf.vo.admin.reservation.AdminReservationItemVO;
 import com.llf.vo.room.RoomOptionVO;
 import com.llf.vo.user.UserOptionVO;
 import org.junit.jupiter.api.Test;
@@ -671,6 +672,26 @@ class ReservationServiceImplTest {
     }
 
     @Test
+    void myReservations_shouldAcceptNumericActiveStatus() {
+        when(reservationMapper.selectMyReservations(eq(1L), any(), any(), eq("all"), eq("ACTIVE")))
+                .thenReturn(List.of());
+
+        reservationService.myReservations(1L, "2026-04-01 00:00:00", "2026-04-30 23:59:59", "all", "2", false);
+
+        verify(reservationMapper).selectMyReservations(eq(1L), any(), any(), eq("all"), eq("ACTIVE"));
+    }
+
+    @Test
+    void listCalendar_shouldDefaultToActiveReservations() {
+        when(reservationMapper.selectCalendarEvents(any(), any(), eq(null), eq("ACTIVE")))
+                .thenReturn(List.of());
+
+        reservationService.listCalendar("2026-04-01 00:00:00", "2026-04-30 23:59:59", null, null);
+
+        verify(reservationMapper).selectCalendarEvents(any(), any(), eq(null), eq("ACTIVE"));
+    }
+
+    @Test
     void myReservations_shouldFillReviewedTrueAndMyReviewWhenReviewExists() {
         MyReservationVO reservation = myReservationDetail(91L);
         when(reservationMapper.selectMyReservations(eq(1L), any(), any(), eq("all"), eq("ACTIVE")))
@@ -751,6 +772,60 @@ class ReservationServiceImplTest {
         assertEquals(1, result.getPageNum());
         assertEquals(8, result.getPageSize());
         assertEquals(List.of(101L, 100L), result.getList().stream().map(MyReservationVO::getId).toList());
+    }
+
+    @Test
+    void adminApproveReservation_shouldRevalidateConflictBeforeActivating() {
+        when(reservationMapper.selectAdminReservationProcessById(200L))
+                .thenReturn(adminProcessRow(200L, 10L, 1L, "PENDING", 6));
+
+        RoomOptionVO room = new RoomOptionVO();
+        room.setId(10L);
+        room.setStatus("AVAILABLE");
+        room.setCapacity(10);
+        when(roomMapper.selectOptionById(10L)).thenReturn(room);
+        when(reservationMapper.countConflictExcludeSelf(eq(200L), eq(10L), any(), any())).thenReturn(1);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> reservationService.adminApproveReservation(200L, 99L, "通过"));
+
+        assertEquals(400, ex.getCode());
+        assertTrue(ex.getMessage().contains("conflicts"));
+        verify(reservationMapper, never()).approveReservation(any(), any(), any());
+    }
+
+    @Test
+    void adminRejectReservation_shouldRejectPendingAndNotifyOrganizer() {
+        ReservationMapper.AdminReservationProcessRow row = adminProcessRow(201L, 10L, 1L, "PENDING", 6);
+        when(reservationMapper.selectAdminReservationProcessById(201L)).thenReturn(row);
+        AdminReservationItemVO item = adminItem(201L, "REJECTED");
+        when(reservationMapper.rejectReservation(201L, 99L, "资料不完整")).thenReturn(1);
+        when(reservationMapper.selectAdminReservationById(201L)).thenReturn(item);
+        when(reservationMapper.selectMyReservationDevices(List.of(201L))).thenReturn(List.of());
+        when(reservationMapper.selectReservationParticipants(List.of(201L))).thenReturn(List.of());
+
+        AdminReservationItemVO result = reservationService.adminRejectReservation(201L, 99L, "资料不完整");
+
+        assertEquals("REJECTED", result.getStatus());
+        verify(reservationMapper).rejectReservation(201L, 99L, "资料不完整");
+        verify(notificationService).createReservationRejectedNotification(1L, row.getTitle(), "资料不完整");
+    }
+
+    @Test
+    void adminExceptionReservation_shouldMarkActiveExceptionAndNotifyOrganizer() {
+        ReservationMapper.AdminReservationProcessRow row = adminProcessRow(202L, 10L, 1L, "ACTIVE", 6);
+        when(reservationMapper.selectAdminReservationProcessById(202L)).thenReturn(row);
+        AdminReservationItemVO item = adminItem(202L, "EXCEPTION");
+        when(reservationMapper.markReservationException(202L, 99L, "设备故障")).thenReturn(1);
+        when(reservationMapper.selectAdminReservationById(202L)).thenReturn(item);
+        when(reservationMapper.selectMyReservationDevices(List.of(202L))).thenReturn(List.of());
+        when(reservationMapper.selectReservationParticipants(List.of(202L))).thenReturn(List.of());
+
+        AdminReservationItemVO result = reservationService.adminExceptionReservation(202L, 99L, "设备故障");
+
+        assertEquals("EXCEPTION", result.getStatus());
+        verify(reservationMapper).markReservationException(202L, 99L, "设备故障");
+        verify(notificationService).createReservationExceptionNotification(1L, row.getTitle(), "设备故障");
     }
 
     private ReservationDeviceRequirementDTO deviceRequirement(Long deviceId, Integer quantity) {
@@ -854,5 +929,28 @@ class ReservationServiceImplTest {
         row.setQuantity(quantity);
         row.setStatus("ENABLED");
         return row;
+    }
+
+    private ReservationMapper.AdminReservationProcessRow adminProcessRow(Long id, Long roomId, Long organizerId, String status, Integer attendees) {
+        ReservationMapper.AdminReservationProcessRow row = new ReservationMapper.AdminReservationProcessRow();
+        row.setId(id);
+        row.setRoomId(roomId);
+        row.setOrganizerId(organizerId);
+        row.setTitle("审核预约" + id);
+        row.setRoomName("会议室" + roomId);
+        row.setAttendees(attendees);
+        row.setStatus(status);
+        row.setStartTime(Timestamp.valueOf(LocalDateTime.parse("2026-04-15T09:00:00")));
+        row.setEndTime(Timestamp.valueOf(LocalDateTime.parse("2026-04-15T10:00:00")));
+        return row;
+    }
+
+    private AdminReservationItemVO adminItem(Long id, String status) {
+        AdminReservationItemVO item = new AdminReservationItemVO();
+        item.setId(id);
+        item.setStatus(status);
+        item.setDevices(List.of());
+        item.setParticipants(List.of());
+        return item;
     }
 }

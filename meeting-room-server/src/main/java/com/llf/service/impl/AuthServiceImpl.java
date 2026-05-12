@@ -2,6 +2,8 @@ package com.llf.service.impl;
 
 import com.llf.auth.AuthContext;
 import com.llf.auth.AuthUser;
+import com.llf.auth.LoginAttemptGuard;
+import com.llf.auth.PasswordHasher;
 import com.llf.auth.TokenStore;
 import com.llf.dto.auth.LoginDTO;
 import com.llf.mapper.SysUserMapper;
@@ -24,6 +26,8 @@ public class AuthServiceImpl implements AuthService {
     private TokenStore tokenStore;
     @Resource
     private CaptchaService captchaService;
+    @Resource
+    private LoginAttemptGuard loginAttemptGuard;
 
     @Override
     public LoginVO login(LoginDTO dto) {
@@ -32,17 +36,21 @@ public class AuthServiceImpl implements AuthService {
         }
 
         captchaService.verifyCaptcha(dto.getCaptchaId(), dto.getCode());
+        loginAttemptGuard.assertNotLocked(dto.getUsername());
 
         SysUserMapper.SysUserDO u = sysUserMapper.findByUsername(dto.getUsername());
         if (u == null) {
+            loginAttemptGuard.recordFailure(dto.getUsername());
             throw new BizException(401, "username or password is incorrect");
         }
-        if (!"ACTIVE".equalsIgnoreCase(u.status)) {
+        if (!isActiveStatus(u.status)) {
             throw new BizException(403, "account is disabled");
         }
-        if (!dto.getPassword().equals(u.passwordHash)) {
+        if (!PasswordHasher.matches(dto.getPassword(), u.passwordHash)) {
+            loginAttemptGuard.recordFailure(dto.getUsername());
             throw new BizException(401, "username or password is incorrect");
         }
+        loginAttemptGuard.recordSuccess(dto.getUsername());
 
         AuthUser au = new AuthUser();
         au.setId(u.id);
@@ -72,9 +80,17 @@ public class AuthServiceImpl implements AuthService {
         if (role == null || role.isBlank()) {
             return "user";
         }
-        if ("ADMIN".equalsIgnoreCase(role)) {
+        if ("ADMIN".equalsIgnoreCase(role) || "2".equals(role.trim())) {
             return "admin";
         }
         return "user";
+    }
+
+    private boolean isActiveStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return false;
+        }
+        String value = status.trim();
+        return "ACTIVE".equalsIgnoreCase(value) || "1".equals(value);
     }
 }

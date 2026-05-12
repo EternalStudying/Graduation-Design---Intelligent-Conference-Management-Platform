@@ -1,0 +1,2 @@
+
+435fba2386b9361f06e1ae2f871a80f74627a78b	{"key":"make-fetch-happen:request-cache:http://registry.npmmirror.com/pako","integrity":null,"time":1776516172074,"size":"262","metadata":{"time":1776516172074,"url":"http://registry.npmmirror.com/pako","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Sat, 18 Apr 2026 12:42:51 GMT","location":"https://registry.npmmirror.com/pako"},"options":{"compress":true},"status":301}}

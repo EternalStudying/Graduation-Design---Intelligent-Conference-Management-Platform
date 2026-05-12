@@ -6,6 +6,7 @@ import com.llf.assistant.AiAssistantActionRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +71,17 @@ class AiAssistantSemanticServiceTest {
         AiAssistantIntentParseResult deviceMeeting = semanticService.parse("找个带白板和投影的会议室", null);
         assertEquals("rooms.search", deviceMeeting.getActionType());
         assertEquals("投影、白板", deviceMeeting.getFields().toMap().get("deviceRequirements"));
+
+        AiAssistantIntentParseResult pendingApproval = semanticService.parse("查看待审核预约", null);
+        assertEquals("admin.reservations.pending", pendingApproval.getActionType());
+
+        AiAssistantIntentParseResult approveReservation = semanticService.parse("通过预约 9001", null);
+        assertEquals("admin.reservations.approve", approveReservation.getActionType());
+        assertEquals(9001L, approveReservation.getFields().getReservationId());
+
+        AiAssistantIntentParseResult rejectReservation = semanticService.parse("驳回预约 9001", null);
+        assertEquals("admin.reservations.reject", rejectReservation.getActionType());
+        assertEquals(9001L, rejectReservation.getFields().getReservationId());
     }
 
     @Test
@@ -117,8 +129,15 @@ class AiAssistantSemanticServiceTest {
         }
         Map<String, Object> actualFields = result.getFields().toMap();
         for (Map.Entry<String, Object> entry : expectedFields.entrySet()) {
-            assertEquals(entry.getValue(), actualFields.get(entry.getKey()), item.id() + ":" + entry.getKey());
+            assertEquals(resolveExpectedFieldValue(item, entry), actualFields.get(entry.getKey()), item.id() + ":" + entry.getKey());
         }
+    }
+
+    private Object resolveExpectedFieldValue(ColloquialCase item, Map.Entry<String, Object> entry) {
+        if ("meetingDate".equals(entry.getKey()) && "tomorrow_afternoon".equals(item.expectedFields().get("timeRangeLabel"))) {
+            return LocalDate.now().plusDays(1).toString();
+        }
+        return entry.getValue();
     }
 
     private record ColloquialCase(String id,

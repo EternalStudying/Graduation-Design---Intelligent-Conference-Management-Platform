@@ -12,7 +12,8 @@ public interface RoomService {
                              String keyword,
                              String status,
                              String capacityType,
-                             String location);
+                             String location,
+                             String deviceIds);
 
     RoomPageItemVO userDetailById(Long id);
 

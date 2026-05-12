@@ -1,6 +1,7 @@
 package com.llf.mapper;
 
 import com.llf.vo.room.RoomListItemVO;
+import com.llf.vo.room.RoomDeviceOptionVO;
 import com.llf.vo.room.RoomOptionVO;
 import com.llf.vo.room.RoomPageDeviceVO;
 import com.llf.vo.room.RoomPageItemVO;
@@ -15,10 +16,10 @@ public interface RoomMapper {
     @Select("SELECT COUNT(*) FROM meeting_room")
     Integer countAll();
 
-    @Select("SELECT COUNT(*) FROM meeting_room WHERE status = 'AVAILABLE'")
+    @Select("SELECT COUNT(*) FROM meeting_room WHERE CONCAT(status, '') IN ('AVAILABLE', '1')")
     Integer countAvailable();
 
-    @Select("SELECT COUNT(*) FROM meeting_room WHERE status = 'MAINTENANCE'")
+    @Select("SELECT COUNT(*) FROM meeting_room WHERE CONCAT(status, '') IN ('MAINTENANCE', '2')")
     Integer countMaintenance();
 
     @Select("""
@@ -43,7 +44,11 @@ public interface RoomMapper {
                 r.name,
                 r.location,
                 r.capacity,
-                r.status
+                CASE CONCAT(r.status, '')
+                  WHEN '1' THEN 'AVAILABLE'
+                  WHEN '2' THEN 'MAINTENANCE'
+                  ELSE CONCAT(r.status, '')
+                END AS status
               FROM meeting_room r
               <where>
                 <if test="keyword != null and keyword != ''">
@@ -54,7 +59,7 @@ public interface RoomMapper {
                   )
                 </if>
                 <if test="onlyAvailable != null and onlyAvailable == true">
-                  AND r.status = 'AVAILABLE'
+                  AND CONCAT(r.status, '') IN ('AVAILABLE', '1')
                 </if>
                 <if test="deviceId != null">
                   AND EXISTS (
@@ -83,7 +88,14 @@ public interface RoomMapper {
                   )
                 </if>
                 <if test="status != null and status != ''">
-                  AND r.status = #{status}
+                  AND (
+                    CONCAT(r.status, '') = #{status}
+                    OR CONCAT(r.status, '') = CASE #{status}
+                      WHEN 'AVAILABLE' THEN '1'
+                      WHEN 'MAINTENANCE' THEN '2'
+                      ELSE #{status}
+                    END
+                  )
                 </if>
                 <if test="location != null and location != ''">
                   AND r.location = #{location}
@@ -101,13 +113,29 @@ public interface RoomMapper {
                     </when>
                   </choose>
                 </if>
+                <if test="deviceIds != null and deviceIds.size() > 0">
+                  AND r.id IN (
+                    SELECT rd.room_id
+                    FROM room_device rd
+                    JOIN device d ON d.id = rd.device_id
+                    WHERE CONCAT(d.status, '') IN ('ENABLED', '1')
+                      AND rd.device_id IN
+                      <foreach collection="deviceIds" item="deviceId" open="(" separator="," close=")">
+                        #{deviceId}
+                      </foreach>
+                    GROUP BY rd.room_id
+                    HAVING COUNT(DISTINCT rd.device_id) = #{deviceCount}
+                  )
+                </if>
               </where>
             </script>
             """)
     Long countRoomsForPage(@Param("keyword") String keyword,
                            @Param("status") String status,
                            @Param("capacityType") String capacityType,
-                           @Param("location") String location);
+                           @Param("location") String location,
+                           @Param("deviceIds") List<Long> deviceIds,
+                           @Param("deviceCount") Integer deviceCount);
 
     @Select("""
             <script>
@@ -117,7 +145,11 @@ public interface RoomMapper {
                 r.name,
                 r.location,
                 r.capacity,
-                r.status,
+                CASE CONCAT(r.status, '')
+                  WHEN '1' THEN 'AVAILABLE'
+                  WHEN '2' THEN 'MAINTENANCE'
+                  ELSE CONCAT(r.status, '')
+                END AS status,
                 r.description,
                 r.maintenance_remark AS maintenanceRemark
               FROM meeting_room r
@@ -130,7 +162,14 @@ public interface RoomMapper {
                   )
                 </if>
                 <if test="status != null and status != ''">
-                  AND r.status = #{status}
+                  AND (
+                    CONCAT(r.status, '') = #{status}
+                    OR CONCAT(r.status, '') = CASE #{status}
+                      WHEN 'AVAILABLE' THEN '1'
+                      WHEN 'MAINTENANCE' THEN '2'
+                      ELSE #{status}
+                    END
+                  )
                 </if>
                 <if test="location != null and location != ''">
                   AND r.location = #{location}
@@ -148,6 +187,20 @@ public interface RoomMapper {
                     </when>
                   </choose>
                 </if>
+                <if test="deviceIds != null and deviceIds.size() > 0">
+                  AND r.id IN (
+                    SELECT rd.room_id
+                    FROM room_device rd
+                    JOIN device d ON d.id = rd.device_id
+                    WHERE CONCAT(d.status, '') IN ('ENABLED', '1')
+                      AND rd.device_id IN
+                      <foreach collection="deviceIds" item="deviceId" open="(" separator="," close=")">
+                        #{deviceId}
+                      </foreach>
+                    GROUP BY rd.room_id
+                    HAVING COUNT(DISTINCT rd.device_id) = #{deviceCount}
+                  )
+                </if>
               </where>
               ORDER BY r.name ASC, r.id ASC
               LIMIT #{limit} OFFSET #{offset}
@@ -157,8 +210,21 @@ public interface RoomMapper {
                                         @Param("status") String status,
                                         @Param("capacityType") String capacityType,
                                         @Param("location") String location,
+                                        @Param("deviceIds") List<Long> deviceIds,
+                                        @Param("deviceCount") Integer deviceCount,
                                         @Param("offset") Integer offset,
                                         @Param("limit") Integer limit);
+
+    @Select("""
+            SELECT DISTINCT
+              d.id,
+              d.name
+            FROM room_device rd
+            JOIN device d ON d.id = rd.device_id
+            WHERE CONCAT(d.status, '') IN ('ENABLED', '1')
+            ORDER BY d.name ASC, d.id ASC
+            """)
+    List<RoomDeviceOptionVO> selectRoomDeviceOptions();
 
     @Select("""
               SELECT d.name
@@ -176,7 +242,11 @@ public interface RoomMapper {
                 d.name,
                 rd.quantity AS quantity,
                 d.total,
-                d.status
+                CASE CONCAT(d.status, '')
+                  WHEN '1' THEN 'ENABLED'
+                  WHEN '0' THEN 'DISABLED'
+                  ELSE CONCAT(d.status, '')
+                END AS status
               FROM room_device rd
               JOIN device d ON d.id = rd.device_id
               WHERE rd.room_id = #{roomId}
@@ -191,10 +261,14 @@ public interface RoomMapper {
                   name,
                   location,
                   capacity,
-                  status,
+                  CASE CONCAT(status, '')
+                    WHEN '1' THEN 'AVAILABLE'
+                    WHEN '2' THEN 'MAINTENANCE'
+                    ELSE CONCAT(status, '')
+                  END AS status,
                   description
                 FROM meeting_room
-                WHERE status = 'AVAILABLE'
+                WHERE CONCAT(status, '') IN ('AVAILABLE', '1')
                 ORDER BY name ASC, id ASC
             """)
     List<RoomOptionVO> selectAvailableOptions();
@@ -207,7 +281,7 @@ public interface RoomMapper {
                   location,
                   capacity
                 FROM meeting_room
-                WHERE status = 'AVAILABLE'
+                WHERE CONCAT(status, '') IN ('AVAILABLE', '1')
                   AND capacity >= #{attendees}
                 ORDER BY id ASC
             """)
@@ -221,7 +295,7 @@ public interface RoomMapper {
                 rd.quantity AS quantity
               FROM room_device rd
               JOIN device d ON d.id = rd.device_id
-              WHERE d.status = 'ENABLED'
+              WHERE CONCAT(d.status, '') IN ('ENABLED', '1')
                 AND rd.room_id IN
                 <foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
                   #{roomId}
@@ -238,7 +312,11 @@ public interface RoomMapper {
                   name,
                   location,
                   capacity,
-                  status,
+                  CASE CONCAT(status, '')
+                    WHEN '1' THEN 'AVAILABLE'
+                    WHEN '2' THEN 'MAINTENANCE'
+                    ELSE CONCAT(status, '')
+                  END AS status,
                   description
                 FROM meeting_room
                 WHERE id = #{id}
@@ -265,7 +343,11 @@ public interface RoomMapper {
               name,
               location,
               capacity,
-              status,
+              CASE CONCAT(status, '')
+                WHEN '1' THEN 'AVAILABLE'
+                WHEN '2' THEN 'MAINTENANCE'
+                ELSE CONCAT(status, '')
+              END AS status,
               description,
               maintenance_remark AS maintenanceRemark
             FROM meeting_room
@@ -282,7 +364,21 @@ public interface RoomMapper {
 
     @Insert("""
             INSERT INTO meeting_room(room_code, name, location, capacity, status, description, maintenance_remark, created_at, updated_at)
-            VALUES(#{roomCode}, #{name}, #{location}, #{capacity}, #{status}, #{description}, #{maintenanceRemark}, NOW(), NOW())
+            VALUES(
+              #{roomCode},
+              #{name},
+              #{location},
+              #{capacity},
+              CASE #{status}
+                WHEN 'AVAILABLE' THEN 1
+                WHEN 'MAINTENANCE' THEN 2
+                ELSE #{status}
+              END,
+              #{description},
+              #{maintenanceRemark},
+              NOW(),
+              NOW()
+            )
             """)
     int insertRoom(@Param("roomCode") String roomCode,
                    @Param("name") String name,
@@ -298,7 +394,11 @@ public interface RoomMapper {
                 name = #{name},
                 location = #{location},
                 capacity = #{capacity},
-                status = #{status},
+                status = CASE #{status}
+                    WHEN 'AVAILABLE' THEN 1
+                    WHEN 'MAINTENANCE' THEN 2
+                    ELSE #{status}
+                END,
                 description = #{description},
                 maintenance_remark = #{maintenanceRemark},
                 updated_at = NOW()
@@ -315,7 +415,11 @@ public interface RoomMapper {
 
     @Update("""
             UPDATE meeting_room
-            SET status = #{status},
+            SET status = CASE #{status}
+                    WHEN 'AVAILABLE' THEN 1
+                    WHEN 'MAINTENANCE' THEN 2
+                    ELSE #{status}
+                END,
                 maintenance_remark = #{maintenanceRemark},
                 updated_at = NOW()
             WHERE id = #{id}
